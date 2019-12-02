@@ -5,7 +5,11 @@ module Intcode
   # This class is just a holder for information about an Opcode, including Proc
   # objects for the implementation and a debug/display function
   class Opcode
-    attr_reader :sym, :size, :impl, :disasm
+    property sym : Symbol
+    property size : Int32
+    property impl : Proc(VM, Int32)
+    property disasm : Proc(VM, String)
+
     def initialize(sym, size, impl, disasm)
       @sym = sym
       @size = size
@@ -15,19 +19,19 @@ module Intcode
 
     # Execute this opcode inside this VM
     def exec(vm)
-      self.instance_exec(vm, &impl)
+      impl.call(vm)
     end
 
     # Attempt to produce a debug string for this opcode
     def debug(vm)
-      self.instance_exec(vm, &disasm)
+      disasm.call(vm)
     end
   end
 
   class VM
-    attr_accessor :mem
-    attr_accessor :pc
-    attr_accessor :halted
+    property mem : Array(Int32)
+    property pc : Int32
+    property halted : Bool
 
     def initialize(mem)
       @mem = mem
@@ -36,21 +40,21 @@ module Intcode
     end
 
     def self.from_file(filename)
-      VM.new(Intcode::load_file(filename))
+      VM.new(load_file(filename))
     end
 
     def self.from_string(str)
-      VM.new(Intcode::read_intcode(str))
+      VM.new(read_intcode(str))
     end
 
     def run
-      while !@halted && @pc < mem.length
+      while !@halted && @pc < mem.size
         opcode = OPCODES[mem[pc]]
         if opcode == nil
           raise "INVALID OPCODE AT #{pc}: #{mem[pc]}"
         end
 
-        Intcode::log("%4i: %s" % [pc, opcode.debug(self)])
+        Intcode.log("%4i: %s" % [pc, opcode.debug(self)])
         opcode.exec(self)
       end
     end
@@ -62,39 +66,38 @@ module Intcode
   OPCODES = {
     1 => Opcode.new(:add,
                     4,
-                    Proc.new { |vm|
+                    ->(vm: VM) {
                       x = vm.mem[vm.pc+1]
                       y = vm.mem[vm.pc+2]
                       dest = vm.mem[vm.pc+3]
                       vm.mem[dest] = vm.mem[x] + vm.mem[y]
-                      vm.pc += self.size
+                      vm.pc += 4
                     },
-                    Proc.new { |vm|
+                    ->(vm: VM) {
                       "ADD %i %i %i" % [vm.mem[vm.pc+1], vm.mem[vm.pc+2], vm.mem[vm.pc+3]]
                     }),
     2 => Opcode.new(:mul,
                     4,
-                    Proc.new { |vm|
+                    ->(vm: VM) {
                       x = vm.mem[vm.pc+1]
                       y = vm.mem[vm.pc+2]
                       dest = vm.mem[vm.pc+3]
                       vm.mem[dest] = vm.mem[x] * vm.mem[y]
-                      vm.pc += self.size
+                      vm.pc += 4
                     },
-                    Proc.new { |vm|
+                    ->(vm: VM) {
                       "MUL %i %i %i" % [vm.mem[vm.pc+1], vm.mem[vm.pc+2], vm.mem[vm.pc+3]]
                     }),
     99 => Opcode.new(:halt,
                      1,
-                     Proc.new { |vm|
+                     ->(vm: VM) {
                        vm.halted = true
+                       1
                      },
-                     Proc.new { |vm|
+                     ->(vm: VM) {
                        "HALT"
                      }),
   }
-
-  public
 
   # Parse the input string into an array of integers
   def self.read_intcode(str)
@@ -110,20 +113,20 @@ module Intcode
 
   # Load an Intcode VM from a string
   def self.load_vm_from_string(str)
-    VM::from_string(str)
+    mem = read_intcode(str)
+    VM.new(mem)
   end
 
   # Load an Intcode VM from a file
   def self.load_vm_from_file(filename)
-    VM::from_file(filename)
+    mem = load_file(filename)
+    VM.new(mem)
   end
 
   # Enable or disable verbose debug logging during execution
   def self.set_debug(enable_debug)
     @@DEBUG = enable_debug
   end
-
-  private
 
   def self.log(msg)
     puts msg if @@DEBUG
