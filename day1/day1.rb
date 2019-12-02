@@ -6,7 +6,7 @@ input = ARGV[0]
 # Per Day 1, we get the amount of fuel for a given mass:
 #   divide by 3, round down, then subtract 2
 def fuel_for_mass(mass)
-  fuel = (mass.to_f / 3.0).floor - 2
+  fuel = (mass.to_i / 3) - 2
   return fuel
 end
 
@@ -27,7 +27,7 @@ def fuel_for_mass_recursive(mass)
   return fuel
 end
 
-puts "Part 2"
+puts "\nPart 2"
 puts File.foreach(input)
   .reject { |line| line.empty? }
   .reduce(0) { |sum, line| sum + fuel_for_mass_recursive(line.to_f) }
