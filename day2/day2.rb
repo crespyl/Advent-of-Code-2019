@@ -103,16 +103,38 @@ if ARGV[0] == nil
 end
 
 puts "Part 1"
-mem = load_file(ARGV[0])
-init_puzzle(mem)
-exec_intcode(mem)
-puts "Output: #{mem[0]}"
-
+require_relative "../intcode.rb"
+vm = Intcode::VM.from_file(ARGV[0])
+init_puzzle(vm.mem)
+vm.run
+puts "Output: #{vm.mem[0]}"
 puts "\n"
+
+def search_vm(filename="input.txt")
+  vm = nil
+  results = {noun: 0, verb: 0, output: 0}
+
+  catch (:done) do
+    for noun in 0..99
+      for verb in 0..99
+        vm = Intcode::VM.from_file(filename)
+        init_puzzle(vm.mem, noun, verb)
+        vm.run
+        if vm.mem[0] == 19690720 || (noun > 99 && verb > 99)
+          results = {noun: noun, verb: verb, output: vm.mem[0]}
+          break;
+        end
+      end
+    end
+  end
+
+  return results
+end
+
 puts "Part 2"
 puts "searching..."
 t_start = Time.now
-results = search(ARGV[0])
+results = search_vm(ARGV[0])
 t_end = Time.now
 puts "search completed in %0.2fs" % (t_end - t_start)
 puts "  output: #{results[:output]}"
