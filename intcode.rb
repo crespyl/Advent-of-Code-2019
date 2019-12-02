@@ -2,6 +2,98 @@
 module Intcode
   @@DEBUG = false
 
+  # This class is just a holder for information about an Opcode, including Proc
+  # objects for the implementation and a debug/display function
+  class Opcode
+    attr_reader :sym, :size, :impl, :disasm
+    def initialize(sym:, size:, impl:, disasm:)
+      @sym = sym
+      @size = size
+      @impl = impl
+      @disasm = disasm
+    end
+
+    # Execute this opcode inside this VM
+    def exec(vm)
+      self.instance_exec(vm, &impl)
+    end
+
+    # Attempt to produce a debug string for this opcode
+    def debug(vm)
+      self.instance_exec(vm, &disasm)
+    end
+  end
+
+  class VM
+    attr_accessor :mem
+    attr_accessor :pc
+    attr_accessor :halted
+
+    def initialize(mem)
+      @mem = mem
+      @pc = 0
+      @halted = false
+    end
+
+    def self.from_file(filename)
+      VM.new(Intcode::load_file(filename))
+    end
+
+    def self.from_string(str)
+      VM.new(Intcode::read_intcode(str))
+    end
+
+    def run
+      while !@halted && @pc < mem.length
+        opcode = OPCODES[mem[pc]]
+        if opcode == nil
+          raise "INVALID OPCODE AT #{pc}: #{mem[pc]}"
+        end
+
+        Intcode::log("%4i: %s" % [pc, opcode.debug(self)])
+        opcode.exec(self)
+      end
+    end
+  end
+
+  # Here we define the mapping from integer to opcode, along with the actual
+  # implementation of each, as Proc objects that get bound to the Opcode
+  # instance during execution
+  OPCODES = {
+    1 => Opcode.new(sym: :add,
+                    size: 4,
+                    impl: Proc.new { |vm|
+                      x = vm.mem[vm.pc+1]
+                      y = vm.mem[vm.pc+2]
+                      dest = vm.mem[vm.pc+3]
+                      vm.mem[dest] = vm.mem[x] + vm.mem[y]
+                      vm.pc += self.size
+                    },
+                    disasm: Proc.new { |vm|
+                      "ADD %i %i %i" % [vm.mem[vm.pc+1], vm.mem[vm.pc+2], vm.mem[vm.pc+3]]
+                    }),
+    2 => Opcode.new(sym: :mul,
+                    size: 4,
+                    impl: Proc.new { |vm|
+                      x = vm.mem[vm.pc+1]
+                      y = vm.mem[vm.pc+2]
+                      dest = vm.mem[vm.pc+3]
+                      vm.mem[dest] = vm.mem[x] * vm.mem[y]
+                      vm.pc += self.size
+                    },
+                    disasm: Proc.new { |vm|
+                      "MUL %i %i %i" % [vm.mem[vm.pc+1], vm.mem[vm.pc+2], vm.mem[vm.pc+3]]
+                    }),
+    99 => Opcode.new(sym: :halt,
+                     size: 1,
+                     impl: Proc.new { |vm|
+                       vm.halted = true
+                     },
+                     disasm: Proc.new { |vm|
+                       "HALT"
+                     }),
+  }
+
   public
 
   # Parse the input string into an array of integers
@@ -16,50 +108,18 @@ module Intcode
     read_intcode(File.read(filename))
   end
 
-  # Map from an Integer to an opcode symbol
-  def self.get_opcode(int)
-    case int
-    when 1 then :add
-    when 2 then :mul
-    when 99 then :halt
-    else :invalid
-    end
+  # Load an Intcode VM from a string
+  def self.load_vm_from_string(str)
+    VM::from_string(str)
   end
 
-  # This is the actual interpreter; given an Intcode machine state (an array of
-  # integers), we start at index 0 and attempt to process each opcode in turn
-  # until we reach a HALT, then return the final state of the machine
-  def self.exec_intcode(mem)
-    pc = 0
-    while (current_opcode = get_opcode(mem[pc])) != :invalid
-      case current_opcode
-      when :add
-        log("got :add at #{pc}")
-        x = mem[pc+1]
-        y = mem[pc+2]
-        dest = mem[pc+3]
-        log("    add #{x} #{y}, #{dest}")
-        mem[dest] = mem[x] + mem[y]
-        pc += 4
-      when :mul
-        log("got :mul at #{pc}")
-        x = mem[pc+1]
-        y = mem[pc+2]
-        dest = mem[pc+3]
-        log("    mul #{x} #{y}, #{dest}")
-        mem[dest] = mem[x] * mem[y]
-        pc += 4
-      when :halt
-        log("got :halt at #{pc}")
-        break
-      else
-        log("Invalid opcode at #{pc}: #{mem[pc]}")
-        break
-      end
-    end
+  # Load an Intcode VM from a file
+  def self.load_vm_from_file(filename)
+    VM::from_file(filename)
   end
 
-  def self.set_debug_log(enable_debug)
+  # Enable or disable verbose debug logging during execution
+  def self.set_debug(enable_debug)
     @@DEBUG = enable_debug
   end
 
