@@ -1,4 +1,5 @@
-#!/usr/bin/env ruby
+#!/usr/bin/env crystal
+require "../intcode.cr"
 
 # Day 2 has us implementing an "Intcode" VM
 #
@@ -11,7 +12,6 @@
 def read_intcode(str)
   str.split(',')
     .map { |s| s.to_i }
-    .reject { |x| !x.is_a? Integer }
 end
 
 # Map from an integer to an opcode symbol
@@ -78,16 +78,14 @@ def search(filename="input.txt")
   mem = [0]
   results = {noun: 0, verb: 0, output: 0}
 
-  catch (:done) do
-    for noun in 0..99
-      for verb in 0..99
-        mem = load_file(filename)
-        init_puzzle(mem, noun, verb)
-        exec_intcode(mem)
-        if mem[0] == 19690720 || (noun > 99 && verb > 99)
-          results = {noun: noun, verb: verb, output: mem[0]}
-          break;
-        end
+  (0..99).each do |noun|
+    (0.99).each do |verb|
+      mem = load_file(filename)
+      init_puzzle(mem, noun, verb)
+      exec_intcode(mem)
+      if mem[0] == 19690720 || (noun > 99 && verb > 99)
+        results = {noun: noun, verb: verb, output: mem[0]}
+        return results
       end
     end
   end
@@ -103,7 +101,6 @@ if ARGV[0] == nil
 end
 
 puts "Part 1"
-require_relative "../intcode.rb"
 vm = Intcode::VM.from_file(ARGV[0])
 init_puzzle(vm.mem)
 vm.run
@@ -114,16 +111,14 @@ def search_vm(filename="input.txt")
   vm = nil
   results = {noun: 0, verb: 0, output: 0}
 
-  catch (:done) do
-    for noun in 0..99
-      for verb in 0..99
-        vm = Intcode::VM.from_file(filename)
-        init_puzzle(vm.mem, noun, verb)
-        vm.run
-        if vm.mem[0] == 19690720 || (noun > 99 && verb > 99)
-          results = {noun: noun, verb: verb, output: vm.mem[0]}
-          break;
-        end
+  (0..99).each do |noun|
+    (0..99).each do |verb|
+      vm = Intcode::VM.from_file(filename)
+      init_puzzle(vm.mem, noun, verb)
+      vm.run
+      if vm.mem[0] == 19690720 || (noun > 99 && verb > 99)
+        results = {noun: noun, verb: verb, output: vm.mem[0]}
+        return results
       end
     end
   end
@@ -133,10 +128,9 @@ end
 
 puts "Part 2"
 puts "searching..."
-t_start = Time.now
+t_start = Time.local
 results = search_vm(ARGV[0])
-t_end = Time.now
-puts "search completed in %0.2fs" % (t_end - t_start)
+puts "search completed in %s" % (Time.local - t_start).to_s
 puts "  output: #{results[:output]}"
 puts "    noun: #{results[:noun]}"
 puts "    verb: #{results[:verb]}"
