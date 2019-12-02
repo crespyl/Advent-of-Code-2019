@@ -28,6 +28,8 @@ module Intcode
     end
   end
 
+  # This class holds the current state of a running interpreter: the memory
+  # (Array(Int32)), the program counter, and a "halted/running" flag
   class VM
     property mem : Array(Int32)
     property pc : Int32

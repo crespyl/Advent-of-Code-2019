@@ -1,5 +1,5 @@
 #!/usr/bin/env crystal
-require "../intcode.cr"
+require "../lib/intcode.cr"
 
 # Day 2 has us implementing an "Intcode" VM
 #
@@ -95,8 +95,8 @@ end
 
 # Do this stuff if running from the command line
 # ==============================================
-if ARGV[0] == nil
-  puts "usage: ./day2.rb <input filename>"
+if ARGV.size <= 0 || ARGV[0] == nil
+  puts "usage: ./day2 <input filename>"
   exit 1
 end
 

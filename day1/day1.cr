@@ -1,4 +1,9 @@
 #!/usr/bin/env crystal
+#
+if ARGV.size <= 0 || ARGV[0] == nil
+  puts "usage: ./day1 <input filename>"
+  exit 1
+end
 
 # expect input file as first parameter
 input = ARGV[0]
