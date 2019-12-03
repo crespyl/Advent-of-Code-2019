@@ -1,4 +1,4 @@
-DAYS="day1 day2"
+DAYS="day*"
 for d in $DAYS; do
     redo $d
 done
