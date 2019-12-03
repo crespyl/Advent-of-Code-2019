@@ -67,12 +67,6 @@ def closest_to_center(list)
     .first
 end
 
-# Given a list of intersection points, find the one with the shortest combined
-# lengths
-def shorteset_length(list)
-  
-end
-
 if ARGV.size <= 0 || ARGV[0] == nil
   puts "usage: ./day3 <input filename>"
   exit 1

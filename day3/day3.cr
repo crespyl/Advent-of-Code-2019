@@ -17,7 +17,12 @@ class Wire
   @points : Array(Tuple(Int32, Int32))
   @point_dists = {} of Tuple(Int32, Int32) => Int32
   property :points
-  property :point_dists
+  property :point_dists # this is inefficient in the extreme: we keep a map of
+                        # how long the wire is at each point for lookup in Part
+                        # 2. It'd be more efficient to only fully plot one wire
+                        # and then iterate over each of the other wires point by
+                        # point and only save off the intersections as we come
+                        # to them.
   def initialize(points, point_dists)
     @points = points
     @point_dists = point_dists
@@ -66,7 +71,7 @@ def read_wire_points(str)
   Wire.new(points, point_dists)
 end
 
-# Given to point lists, find the intersections
+# Given two point lists, find the intersections
 def intersections(list_a, list_b)
   list_a & list_b
 end
