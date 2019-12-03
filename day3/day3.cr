@@ -44,31 +44,22 @@ def read_wire_points(str)
 
   str
     .split(',')
-    .map { |s|
-      m=s.match(/([LRUD])(\d+)/)
-      if m
-        {m[1], m[2].to_i}
-      else
-        raise "input vector doesn't fit pattern!"
+    .map { |s| m=s.match(/([LRUD])(\d+)/); !m.nil? ? {m[1], m[2].to_i} : raise "invalid input" }
+    .each do |dir, dist|
+      while dist > 0
+        case dir
+        when "L" then x -= 1
+        when "R" then x += 1
+        when "U" then y -= 1
+        when "D" then y += 1
+        end
+        dist -= 1
+        len += 1
+        p = point(x,y)
+        points << p
+        point_dists[p] = len
       end
-    }
-    .each do |a|
-    dir : String = a[0]
-    dist : Int32 = a[1]
-    while dist > 0
-      case dir
-      when "L" then x -= 1
-      when "R" then x += 1
-      when "U" then y -= 1
-      when "D" then y += 1
-      end
-      dist -= 1
-      len += 1
-      p = point(x,y)
-      points << p
-      point_dists[p] = len
     end
-  end
 
   Wire.new(points, point_dists)
 end

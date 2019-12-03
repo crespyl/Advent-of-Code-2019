@@ -1,4 +1,4 @@
 DAYS="day*"
 for DAY in $DAYS; do
-    echo "bin/debug/$DAY"
+    echo "bin/release/$DAY"
 done | xargs redo-ifchange
