@@ -1,21 +1,23 @@
-#!/usr/bin/env ruby
+#!/usr/bin/env crystal
 
 # utility fn to make swapping point representation easier
 def point(x,y)
-  [x,y]
+  {x,y}
 end
 
 # manhattan distance between two points
 def dist(a, b)
-  ax, ay, _ = a
-  bx, by, _ = b
+  ax, ay = a
+  bx, by = b
 
   (ax-bx).abs + (ay-by).abs
 end
 
 class Wire
-  attr_accessor :points
-  attr_accessor :point_dists
+  @points : Array(Tuple(Int32, Int32))
+  @point_dists = {} of Tuple(Int32, Int32) => Int32
+  property :points
+  property :point_dists
   def initialize(points, point_dists)
     @points = points
     @point_dists = point_dists
@@ -29,14 +31,23 @@ end
 # This function will parse such a string into a list of {x,y} tuples for each
 # point on the wire
 def read_wire_points(str)
-  points = []
-  point_dists = {}
+  points = [] of Tuple(Int32, Int32)
+  point_dists = {} of Tuple(Int32, Int32) => Int32
   x, y, len = 0, 0, 0
 
   str
     .split(',')
-    .map { |s| m=s.match(/([LRUD])(\d+)/); point(m[1], m[2].to_i) }
-    .each do |dir, dist|
+    .map { |s|
+      m=s.match(/([LRUD])(\d+)/)
+      if m
+        point(m[1], m[2].to_i)
+      else
+        raise "input vector doesn't fit pattern!"
+      end
+    }
+    .each do |a|
+    dir : String = a[0]
+    dist : Int32 = a[1]
     while dist > 0
       case dir
       when "L" then x -= 1
@@ -79,9 +90,9 @@ if ARGV.size <= 0 || ARGV[0] == nil
 end
 
 input = ARGV[0]
-wires = File.readlines(input)
-  .reject { |line| line.empty? }
-  .map { |line| read_wire_points(line) }
+wires = File.read_lines(input)
+        .reject { |line| line.empty? }
+        .map { |line| read_wire_points(line) }
 
 i_pts = intersections(wires[0].points, wires[1].points)
 result = closest_to_center(i_pts)
@@ -91,9 +102,9 @@ puts dist(result, point(0,0))
 
 # Part 2 requires us to sort the intersections by the shortest combined lengths
 result = i_pts
-  .map { |point| wires[0].point_dists[point] + wires[1].point_dists[point] }
-  .sort
-  .first
+         .map { |point| wires[0].point_dists[point] + wires[1].point_dists[point] }
+         .sort
+         .first
 
 puts "Part 2"
 puts result
