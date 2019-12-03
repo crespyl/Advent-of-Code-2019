@@ -26,7 +26,7 @@ end
 # "R37,D54,L39,U57" etc. Vectors are always prefixed by RLUD and may have 1 or
 # more digits in the length part.
 #
-# This function will parse such a string into a list of {x,y} tuples for each
+# This function will parse such a string into a list of (x,y) tuples for each
 # point on the wire
 def read_wire_points(str)
   points = []

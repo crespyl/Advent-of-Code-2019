@@ -1,12 +1,14 @@
 #!/usr/bin/env crystal
 
+alias Point = Tuple(Int32, Int32)
+
 # utility fn to make swapping point representation easier
-def point(x,y)
+def point(x : Int32, y : Int32)
   {x,y}
 end
 
 # manhattan distance between two points
-def dist(a, b)
+def dist(a : Point, b : Point)
   ax, ay = a
   bx, by = b
 
@@ -14,8 +16,8 @@ def dist(a, b)
 end
 
 class Wire
-  @points : Array(Tuple(Int32, Int32))
-  @point_dists = {} of Tuple(Int32, Int32) => Int32
+  @points : Array(Point)
+  @point_dists = {} of Tuple(Point) => Int32
   property :points
   property :point_dists # this is inefficient in the extreme: we keep a map of
                         # how long the wire is at each point for lookup in Part
@@ -23,7 +25,7 @@ class Wire
                         # and then iterate over each of the other wires point by
                         # point and only save off the intersections as we come
                         # to them.
-  def initialize(points, point_dists)
+  def initialize(points : Array(Point), point_dists : Hash(Point, Int32))
     @points = points
     @point_dists = point_dists
   end
@@ -36,8 +38,8 @@ end
 # This function will parse such a string into a list of {x,y} tuples for each
 # point on the wire
 def read_wire_points(str)
-  points = [] of Tuple(Int32, Int32)
-  point_dists = {} of Tuple(Int32, Int32) => Int32
+  points = [] of Point
+  point_dists = {} of Point => Int32
   x, y, len = 0, 0, 0
 
   str
@@ -45,7 +47,7 @@ def read_wire_points(str)
     .map { |s|
       m=s.match(/([LRUD])(\d+)/)
       if m
-        point(m[1], m[2].to_i)
+        {m[1], m[2].to_i}
       else
         raise "input vector doesn't fit pattern!"
       end

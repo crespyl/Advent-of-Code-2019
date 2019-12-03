@@ -1,4 +1,4 @@
 DAYS="day*"
 for d in $DAYS; do
-    redo $d
+    redo-ifchange $d
 done
