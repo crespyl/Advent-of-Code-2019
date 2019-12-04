@@ -10,11 +10,7 @@ module Intcode
     property impl : Proc(VM, Int32)
     property disasm : Proc(VM, String)
 
-    def initialize(sym, size, impl, disasm)
-      @sym = sym
-      @size = size
-      @impl = impl
-      @disasm = disasm
+    def initialize(@sym, @size, @impl, @disasm)
     end
 
     # Execute this opcode inside this VM
@@ -35,8 +31,7 @@ module Intcode
     property pc : Int32
     property halted : Bool
 
-    def initialize(mem)
-      @mem = mem
+    def initialize(@mem)
       @pc = 0
       @halted = false
     end
