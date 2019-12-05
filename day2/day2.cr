@@ -102,6 +102,7 @@ end
 
 puts "Part 1"
 vm = Intcode::VM.from_file(ARGV[0])
+Intcode.set_debug(true)
 init_puzzle(vm.mem)
 vm.run
 puts "Output: #{vm.mem[0]}"
@@ -129,6 +130,7 @@ end
 puts "Part 2"
 puts "searching..."
 t_start = Time.local
+Intcode.set_debug(false)
 results = search_vm(ARGV[0])
 puts "search completed in %s" % (Time.local - t_start).to_s
 puts "  output: #{results[:output]}"
