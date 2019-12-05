@@ -1,5 +1,4 @@
 # This module define the "Intcode" interpreter, operating on arrays of Integer
-require "io/console"
 
 module Intcode
   @@DEBUG = false
@@ -9,58 +8,60 @@ module Intcode
   class Opcode
     property sym : Symbol
     property size : Int32
-    property impl : Proc(VM, Int32, Int32)
-    property disasm : Proc(VM, Int32, String)
+    property impl : Proc(VM, Array(Parameter), Int32)
+    property disasm : Proc(VM, Array(Parameter), String)
 
-    def initialize(@sym, @size, @impl, @disasm)
+    def initialize(@sym, @size, @impl : Proc(VM, Array(Parameter), Int32), @disasm)
+    end
+
+    def num_params
+      size - 1
     end
 
     # Execute this opcode inside this VM (we pass the actual instruction as well
     # so that the opcode can parse out its addressing modes)
-    def exec(vm, instr)
-      impl.call(vm, instr)
+    def exec(vm, params)
+      impl.call(vm, params)
     end
 
     # Attempt to produce a debug string for this opcode
-    def debug(vm, instr)
-      disasm.call(vm, instr)
+    def debug(vm, params)
+      disasm.call(vm, params)
     end
 
-    # Lookup the correct registered Opcode from an instruction
-    def self.from_instruction(instr)
-      OPCODES[instr % 100]
-    end
-
-    # Get the addressing mode for the nth parameter from an instruction (2+nth digit)
-    #
-    # Mode 0 is "position", should treat the parameter as an address
-    # Mode 1 is immediate, should treat the parameter as a literal
-    def self.get_addressing_mode_for_param(instr, param_idx)
-      case instr // 10**(param_idx+1) % 10
+    # Map from mode number to symbols
+    def self.lookup_addressing_mode(m)
+      case m
       when 0 then :position
       when 1 then :literal
-      else
-        raise "Unsupported addressing mod #{instr}: #{param_idx}"
+      else raise "Unsupported addressing mode #{m}"
       end
     end
 
-    # Given a VM and instruction, decode the given parameter
-    def self.get_parameter(vm, instr, param)
-      mode = get_addressing_mode_for_param(instr, param)
-      val = vm.mem[vm.pc + param]
-      Parameter.new(mode, val)
+    # Get the opcode and parameters at the given address
+    def self.get_opcode_and_params(vm, address)
+      instr = vm.mem[address]
+      opcode, modes = get_opcode_and_modes(instr)
+      {opcode, modes.map_with_index { |m,i| Parameter.new(m, vm.mem[address + i + 1]) }}
     end
 
-    def self.get_parameters(vm, instr, n_params)
-      (1..n_params).map { |i| get_parameter(vm, instr, i) }
-    end
-    def self.debug_parameters(vm, instr, n_params)
-      get_parameters(vm, instr, n_params).map { |p| p.debug }
+    # Get the opcode and addressing modes for a given instruction
+    def self.get_opcode_and_modes(instr)
+      opcode = OPCODES[instr % 100]
+      modes = [] of Symbol
+
+      instr //= 100 # cut off the opcode so we're left with just the mode part
+      while modes.size < opcode.num_params
+        modes << lookup_addressing_mode(instr % 10)
+        instr //= 10
+      end
+
+      {opcode, modes}
     end
   end
 
   # Represents an encoded parameter and its addressing mode
-  class Parameter
+  struct Parameter
     property val : Int32 # the original value in memory
     property mode : Symbol
 
@@ -80,12 +81,19 @@ module Intcode
   # This class holds the current state of a running interpreter: the memory
   # (Array(Int32)), the program counter, and a "halted/running" flag
   class VM
+    # Memory
     property mem : Array(Int32)
+
+    # Registers
     property pc : Int32
+
+    # Status flags
     property halted : Bool
+    property needs_input : Bool
+
+    # I/O Buffers
     property inputs : Array(Int32)
     property outputs : Array(Int32)
-    property needs_input : Bool
 
     def initialize(mem)
       @pc = 0
@@ -141,15 +149,15 @@ module Intcode
       while !@halted && !@needs_input && @pc < mem.size
         instr = mem[pc]
         begin
-        opcode = Opcode.from_instruction(instr)
+        opcode, params = Opcode.get_opcode_and_params(self, pc)
         rescue
           raise "INVALID OPCODE AT #{pc}: #{mem[pc]}"
         end
         if opcode == nil
         end
 
-        Intcode.log("%5i:%04i: %s" % [pc, mem[pc], opcode.debug(self, instr)])
-        opcode.exec(self, instr)
+        Intcode.log("%5i %05i: %s" % [pc, mem[pc], opcode.debug(self, params)])
+        opcode.exec(self, params)
       end
 
       if @halted
@@ -169,17 +177,18 @@ module Intcode
     def get_input
       if inputs.size > 0
         input = inputs.shift
-        Intcode.log "                                              < #{input}"
+        Intcode.log "%50s" % "< #{input}"
         return input
       else
         @needs_input = true
         Intcode.log "NEED INPUT"
+        return nil
       end
     end
 
     def write_output(val)
       outputs << val
-      Intcode.log "                                              > #{val}"
+      Intcode.log "%50s" % "> #{val}"
     end
   end
 
@@ -189,28 +198,28 @@ module Intcode
   OPCODES = {
     1 => Opcode.new(:add,
                     4,
-                    ->(vm: VM, instr: Int32) {
-                      x, y, dest = Opcode.get_parameters(vm, instr, 3)
+                    ->(vm: VM, params: Array(Parameter)) {
+                      x, y, dest = params
                       vm.write_param_value(dest, vm.read_param(x) + vm.read_param(y))
                       vm.pc += 4
                     },
-                    ->(vm: VM, instr: Int32) {
-                      "ADD %5s, %5s -> %5s" % Opcode.debug_parameters(vm, instr, 3)
+                    ->(vm: VM, params: Array(Parameter)) {
+                      "ADD %5s, %5s -> %5s" % params.map { |p| p.debug }
                     }),
     2 => Opcode.new(:mul,
                     4,
-                    ->(vm: VM, instr: Int32) {
-                      x, y, dest = Opcode.get_parameters(vm, instr, 3)
+                    ->(vm: VM, params: Array(Parameter)) {
+                      x, y, dest = params
                       vm.write_param_value(dest, vm.read_param(x) * vm.read_param(y))
                       vm.pc += 4
                     },
-                    ->(vm: VM, instr: Int32) {
-                      "MUL %5s, %5s -> %5s" % Opcode.debug_parameters(vm, instr, 3)
+                    ->(vm: VM, params: Array(Parameter)) {
+                      "MUL %5s, %5s -> %5s" % params.map { |p| p.debug }
                     }),
     3 => Opcode.new(:input,
                     2,
-                    ->(vm: VM, instr: Int32) {
-                      dest = Opcode.get_parameter(vm, instr, 1)
+                    ->(vm: VM, params: Array(Parameter)) {
+                      dest = params.first
                       if input = vm.get_input
                         vm.write_param_value(dest, input)
                         vm.pc += 2
@@ -218,49 +227,49 @@ module Intcode
                         0
                       end
                     },
-                    ->(vm: VM, instr: Int32) {
-                      "IN  -> %5s" % Opcode.debug_parameters(vm, instr, 1)
+                    ->(vm: VM, params: Array(Parameter)) {
+                      "IN  -> %5s" % params.map { |p| p.debug }
                     }),
     4 => Opcode.new(:output,
                     2,
-                    ->(vm: VM, instr: Int32) {
-                      x = Opcode.get_parameter(vm, instr, 1)
+                    ->(vm: VM, params: Array(Parameter)) {
+                      x = params.first
                       vm.write_output(vm.read_param(x))
                       vm.pc += 2
                     },
-                    ->(vm: VM, instr: Int32) {
-                      "OUT %5s" % Opcode.debug_parameters(vm, instr, 1)
+                    ->(vm: VM, params: Array(Parameter)) {
+                      "OUT %5s" % params.map { |p| p.debug }
                     }),
     5 => Opcode.new(:jt,
                     3,
-                    ->(vm: VM, instr: Int32) {
-                      x, dest = Opcode.get_parameters(vm, instr, 2)
+                    ->(vm: VM, params: Array(Parameter)) {
+                      x, dest = params
                       if vm.read_param(x) != 0
                         vm.pc = vm.read_param(dest)
                       else
                         vm.pc += 3
                       end
                     },
-                    ->(vm: VM, instr: Int32) {
-                      "JT  %5s, %5s" % Opcode.debug_parameters(vm, instr, 2)
+                    ->(vm: VM, params: Array(Parameter)) {
+                      "JT  %5s, %5s" % params.map { |p| p.debug }
                     }),
     6 => Opcode.new(:jf,
                     3,
-                    ->(vm: VM, instr: Int32) {
-                      x, dest = Opcode.get_parameters(vm, instr, 2)
+                    ->(vm: VM, params: Array(Parameter)) {
+                      x, dest = params
                       if vm.read_param(x) == 0
                         vm.pc = vm.read_param(dest)
                       else
                         vm.pc += 3
                       end
                     },
-                    ->(vm: VM, instr: Int32) {
-                      "JF  %5s, %5s" % Opcode.debug_parameters(vm, instr, 2)
+                    ->(vm: VM, params: Array(Parameter)) {
+                      "JF  %5s, %5s" % params.map { |p| p.debug }
                     }),
     7 => Opcode.new(:lt,
                     4,
-                    ->(vm: VM, instr: Int32) {
-                      x, y, dest = Opcode.get_parameters(vm, instr, 3)
+                    ->(vm: VM, params: Array(Parameter)) {
+                      x, y, dest = params
                       if vm.read_param(x) < vm.read_param(y)
                         vm.write_param_value(dest, 1)
                       else
@@ -268,13 +277,13 @@ module Intcode
                       end
                       vm.pc += 4
                     },
-                    ->(vm: VM, instr: Int32) {
-                      "LT  %5s, %5s -> %5s" % Opcode.debug_parameters(vm, instr, 3)
+                    ->(vm: VM, params: Array(Parameter)) {
+                      "LT  %5s, %5s -> %5s" % params.map { |p| p.debug }
                     }),
     8 => Opcode.new(:eq,
                     4,
-                    ->(vm: VM, instr: Int32) {
-                      x, y, dest = Opcode.get_parameters(vm, instr, 3)
+                    ->(vm: VM, params: Array(Parameter)) {
+                      x, y, dest = params
                       if vm.read_param(x) == vm.read_param(y)
                         vm.write_param_value(dest, 1)
                       else
@@ -282,16 +291,16 @@ module Intcode
                       end
                       vm.pc += 4
                     },
-                    ->(vm: VM, instr: Int32) {
-                      "EQ  %5s, %5s -> %5s" % Opcode.debug_parameters(vm, instr, 3)
+                    ->(vm: VM, params: Array(Parameter)) {
+                      "EQ  %5s, %5s -> %5s" % params.map { |p| p.debug }
                     }),
     99 => Opcode.new(:halt,
                      1,
-                     ->(vm: VM, instr: Int32) {
+                     ->(vm: VM, params : Array(Parameter)) {
                        vm.halted = true
                        1
                      },
-                     ->(vm: VM, instr: Int32) {
+                     ->(vm: VM, params : Array(Parameter)) {
                        "HALT"
                      }),
   }
