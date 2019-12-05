@@ -1,7 +1,7 @@
 #!/usr/bin/env crystal
 require "../lib/intcode.cr"
 
-Intcode.set_debug(true)
+Intcode.set_debug(ENV.has_key?("AOC_DEBUG") ? ENV["AOC_DEBUG"] == "true" : false)
 
 puts "Part 1"
 vm = Intcode::VM.from_file(ARGV[0])

@@ -147,9 +147,8 @@ module Intcode
     #   :pc_range_err PC was moved out of the valid memory range
     def run
       while !@halted && !@needs_input && @pc < mem.size
-        instr = mem[pc]
         begin
-        opcode, params = Opcode.get_opcode_and_params(self, pc)
+          opcode, params = Opcode.get_opcode_and_params(self, pc)
         rescue
           raise "INVALID OPCODE AT #{pc}: #{mem[pc]}"
         end
