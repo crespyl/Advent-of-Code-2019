@@ -127,6 +127,16 @@ module Intcode
       end
     end
 
+    # Run the machine until it stops for some reason
+    #
+    # Returns the reason why it stopped:
+    #
+    #   :halted       Executed a HALT instruction
+    #
+    #   :needs_input  Executed an INPUT instruction, but the input buffer was
+    #                 empty, fill the input buffer and call run again to resume
+    #
+    #   :pc_range_err PC was moved out of the valid memory range
     def run
       while !@halted && !@needs_input && @pc < mem.size
         instr = mem[pc]
@@ -141,9 +151,17 @@ module Intcode
         Intcode.log("%5i:%04i: %s" % [pc, mem[pc], opcode.debug(self, instr)])
         opcode.exec(self, instr)
       end
+
+      if @halted
+        return :halted
+      elsif @needs_input
+        return :needs_input
+      elsif @pc >= mem.size
+        return :pc_range_err
+      end
     end
 
-    def send_input(val)
+    def send_input(val : Int32)
       inputs << val
       @needs_input = false
     end
