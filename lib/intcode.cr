@@ -64,12 +64,13 @@ module Intcode
     property val : Int32 # the original value in memory
     property mode : Symbol
 
-    def initialize(@mode, @val) end
+    def initialize(@mode, @val)
+    end
 
     def debug
       case mode
       when :position then "@#{val}"
-      when :literal then "val"
+      when :literal then "#{val}"
       else
         "??"
       end
@@ -82,11 +83,17 @@ module Intcode
     property mem : Array(Int32)
     property pc : Int32
     property halted : Bool
+    property inputs : Array(Int32)
+    property outputs : Array(Int32)
+    property needs_input : Bool
 
     def initialize(mem)
       @pc = 0
       @halted = false
-      @mem = Array.new(4096, 0)
+      @needs_input = false
+      @mem = mem #Array.new(4096, 0)
+      @inputs = [] of Int32
+      @outputs = [] of Int32
       mem.each_with_index do |v, i|
         @mem[i] = v
       end
@@ -121,7 +128,7 @@ module Intcode
     end
 
     def run
-      while !@halted && @pc < mem.size
+      while !@halted && !@needs_input && @pc < mem.size
         instr = mem[pc]
         begin
         opcode = Opcode.from_instruction(instr)
@@ -131,19 +138,30 @@ module Intcode
         if opcode == nil
         end
 
-        Intcode.log("%4i:%04i: %s" % [pc, mem[pc], opcode.debug(self, instr)])
+        Intcode.log("%5i:%04i: %s" % [pc, mem[pc], opcode.debug(self, instr)])
         opcode.exec(self, instr)
       end
     end
 
+    def send_input(val)
+      inputs << val
+      @needs_input = false
+    end
+
     def get_input
-      input = STDIN.read_line.to_i
-      puts "GOT INPUT #{input}"
-      input
+      if inputs.size > 0
+        input = inputs.shift
+        Intcode.log "                                              < #{input}"
+        return input
+      else
+        @needs_input = true
+        Intcode.log "NEED INPUT"
+      end
     end
 
     def write_output(val)
-      puts "                                     GOT OUTPUT #{val}"
+      outputs << val
+      Intcode.log "                                              > #{val}"
     end
   end
 
@@ -159,7 +177,7 @@ module Intcode
                       vm.pc += 4
                     },
                     ->(vm: VM, instr: Int32) {
-                      "ADD %4s, %4s -> %4s" % Opcode.debug_parameters(vm, instr, 3)
+                      "ADD %5s, %5s -> %5s" % Opcode.debug_parameters(vm, instr, 3)
                     }),
     2 => Opcode.new(:mul,
                     4,
@@ -169,17 +187,21 @@ module Intcode
                       vm.pc += 4
                     },
                     ->(vm: VM, instr: Int32) {
-                      "MUL %4s, %4s -> %4s" % Opcode.debug_parameters(vm, instr, 3)
+                      "MUL %5s, %5s -> %5s" % Opcode.debug_parameters(vm, instr, 3)
                     }),
     3 => Opcode.new(:input,
                     2,
                     ->(vm: VM, instr: Int32) {
                       dest = Opcode.get_parameter(vm, instr, 1)
-                      vm.write_param_value(dest, vm.get_input)
-                      vm.pc += 2
+                      if input = vm.get_input
+                        vm.write_param_value(dest, input)
+                        vm.pc += 2
+                      else
+                        0
+                      end
                     },
                     ->(vm: VM, instr: Int32) {
-                      "INPUT -> %4s" % Opcode.debug_parameters(vm, instr, 1)
+                      "IN  -> %5s" % Opcode.debug_parameters(vm, instr, 1)
                     }),
     4 => Opcode.new(:output,
                     2,
@@ -189,7 +211,7 @@ module Intcode
                       vm.pc += 2
                     },
                     ->(vm: VM, instr: Int32) {
-                      "OUTPUT %4s" % Opcode.debug_parameters(vm, instr, 1)
+                      "OUT %5s" % Opcode.debug_parameters(vm, instr, 1)
                     }),
     5 => Opcode.new(:jt,
                     3,
@@ -202,7 +224,7 @@ module Intcode
                       end
                     },
                     ->(vm: VM, instr: Int32) {
-                      "JT  %4s, %4s" % Opcode.debug_parameters(vm, instr, 2)
+                      "JT  %5s, %5s" % Opcode.debug_parameters(vm, instr, 2)
                     }),
     6 => Opcode.new(:jf,
                     3,
@@ -215,7 +237,7 @@ module Intcode
                       end
                     },
                     ->(vm: VM, instr: Int32) {
-                      "JF  %4s, %4s" % Opcode.debug_parameters(vm, instr, 2)
+                      "JF  %5s, %5s" % Opcode.debug_parameters(vm, instr, 2)
                     }),
     7 => Opcode.new(:lt,
                     4,
@@ -229,7 +251,7 @@ module Intcode
                       vm.pc += 4
                     },
                     ->(vm: VM, instr: Int32) {
-                      "LT  %4s, %4s -> %4s" % Opcode.debug_parameters(vm, instr, 3)
+                      "LT  %5s, %5s -> %5s" % Opcode.debug_parameters(vm, instr, 3)
                     }),
     8 => Opcode.new(:eq,
                     4,
@@ -243,7 +265,7 @@ module Intcode
                       vm.pc += 4
                     },
                     ->(vm: VM, instr: Int32) {
-                      "EQ  %4s, %4s -> %4s" % Opcode.debug_parameters(vm, instr, 3)
+                      "EQ  %5s, %5s -> %5s" % Opcode.debug_parameters(vm, instr, 3)
                     }),
     99 => Opcode.new(:halt,
                      1,
