@@ -36,41 +36,42 @@ module Intcode
     # Mode 0 is "position", should treat the parameter as an address
     # Mode 1 is immediate, should treat the parameter as a literal
     def self.get_addressing_mode_for_param(instr, param_idx)
-      instr // 10**(param_idx+1) % 10
-    end
-
-    # Given a VM and instruction, decode the given value
-    def self.get_read_parameter_value(vm, instr, param)
-      case Opcode.get_addressing_mode_for_param(instr, param)
-      when 0 # position mode
-        vm.mem[vm.mem[vm.pc + param]]
-      when 1 # literal mode
-        vm.mem[vm.pc + param]
+      case instr // 10**(param_idx+1) % 10
+      when 0 then :position
+      when 1 then :literal
       else
-        raise "Unsupported addressing mode #{instr}, #{param}"
+        raise "Unsupported addressing mod #{instr}: #{param_idx}"
       end
     end
 
-    # Given a VM and instruction, find the correct address to write to
-    def self.get_write_parameter_address(vm, instr, param)
-      case Opcode.get_addressing_mode_for_param(instr, param)
-      when 0 # position mode, write to this address
-        vm.mem[vm.pc + param]
-      when 1 # literal mode
-        raise "Attempted to write to literal value at #{vm.pc}: #{instr}, #{param}"
-      else
-        raise "Unsupported addressing mode #{instr}, #{param}"
-      end
+    # Given a VM and instruction, decode the given parameter
+    def self.get_parameter(vm, instr, param)
+      mode = get_addressing_mode_for_param(instr, param)
+      val = vm.mem[vm.pc + param]
+      Parameter.new(mode, val)
     end
 
-    def self.debug_parameter_value(vm, instr, param)
-      case Opcode.get_addressing_mode_for_param(instr, param)
-      when 0 # position mode
-        "@#{vm.mem[vm.pc + param]}"
-      when 1 # literal mode
-        "#{vm.mem[vm.pc + param]}"
+    def self.get_parameters(vm, instr, n_params)
+      (1..n_params).map { |i| get_parameter(vm, instr, i) }
+    end
+    def self.debug_parameters(vm, instr, n_params)
+      get_parameters(vm, instr, n_params).map { |p| p.debug }
+    end
+  end
+
+  # Represents an encoded parameter and its addressing mode
+  class Parameter
+    property val : Int32 # the original value in memory
+    property mode : Symbol
+
+    def initialize(@mode, @val) end
+
+    def debug
+      case mode
+      when :position then "@#{val}"
+      when :literal then "val"
       else
-        raise "Unsupported addressing mode #{instr}, #{param}"
+        "??"
       end
     end
   end
@@ -89,7 +90,6 @@ module Intcode
       mem.each_with_index do |v, i|
         @mem[i] = v
       end
-
     end
 
     def self.from_file(filename)
@@ -100,12 +100,35 @@ module Intcode
       VM.new(Intcode.read_intcode(str))
     end
 
+    # Get the value of the provided parameter
+    def read_param(p : Parameter)
+      case p.mode
+      when :position then mem[p.val]
+      when :literal then p.val
+      else
+        raise "Unsupported addressing mode for #{p}"
+      end
+    end
+
+    # Set the address indicated by the parameter to the given value
+    def write_param_value(p : Parameter, val : Int32)
+      case p.mode
+      when :position then mem[p.val] = val
+      when :literal then raise "Cannot write to literal"
+      else
+        raise "Unsupported addressing mode for #{p}"
+      end
+    end
+
     def run
       while !@halted && @pc < mem.size
         instr = mem[pc]
+        begin
         opcode = Opcode.from_instruction(instr)
-        if opcode == nil
+        rescue
           raise "INVALID OPCODE AT #{pc}: #{mem[pc]}"
+        end
+        if opcode == nil
         end
 
         Intcode.log("%4i:%04i: %s" % [pc, mem[pc], opcode.debug(self, instr)])
@@ -131,116 +154,96 @@ module Intcode
     1 => Opcode.new(:add,
                     4,
                     ->(vm: VM, instr: Int32) {
-                      x = Opcode.get_read_parameter_value(vm, instr, 1)
-                      y = Opcode.get_read_parameter_value(vm, instr, 2)
-                      dest = Opcode.get_write_parameter_address(vm, instr, 3)
-                      vm.mem[dest] = x + y
+                      x, y, dest = Opcode.get_parameters(vm, instr, 3)
+                      vm.write_param_value(dest, vm.read_param(x) + vm.read_param(y))
                       vm.pc += 4
                     },
                     ->(vm: VM, instr: Int32) {
-                      "ADD %4s, %4s -> %4s" % [Opcode.debug_parameter_value(vm, instr, 1),
-                                               Opcode.debug_parameter_value(vm, instr, 2),
-                                               Opcode.debug_parameter_value(vm, instr, 3)]
+                      "ADD %4s, %4s -> %4s" % Opcode.debug_parameters(vm, instr, 3)
                     }),
     2 => Opcode.new(:mul,
                     4,
                     ->(vm: VM, instr: Int32) {
-                      x = Opcode.get_read_parameter_value(vm, instr, 1)
-                      y = Opcode.get_read_parameter_value(vm, instr, 2)
-                      dest = Opcode.get_write_parameter_address(vm, instr, 3)
-                      vm.mem[dest] = x * y
+                      x, y, dest = Opcode.get_parameters(vm, instr, 3)
+                      vm.write_param_value(dest, vm.read_param(x) * vm.read_param(y))
                       vm.pc += 4
                     },
                     ->(vm: VM, instr: Int32) {
-                      "MUL %4s, %4s -> %4s" % [Opcode.debug_parameter_value(vm, instr, 1),
-                                               Opcode.debug_parameter_value(vm, instr, 2),
-                                               Opcode.debug_parameter_value(vm, instr, 3)]
+                      "MUL %4s, %4s -> %4s" % Opcode.debug_parameters(vm, instr, 3)
                     }),
     3 => Opcode.new(:input,
                     2,
                     ->(vm: VM, instr: Int32) {
-                      dest = Opcode.get_write_parameter_address(vm, instr, 1)
-                      vm.mem[dest] = vm.get_input
+                      dest = Opcode.get_parameter(vm, instr, 1)
+                      vm.write_param_value(dest, vm.get_input)
                       vm.pc += 2
                     },
                     ->(vm: VM, instr: Int32) {
-                      "INPUT -> %4s" % [vm.mem[vm.pc+1]]
+                      "INPUT -> %4s" % Opcode.debug_parameters(vm, instr, 1)
                     }),
     4 => Opcode.new(:output,
                     2,
                     ->(vm: VM, instr: Int32) {
-                      x = Opcode.get_read_parameter_value(vm, instr, 1)
-                      vm.write_output(x)
+                      x = Opcode.get_parameter(vm, instr, 1)
+                      vm.write_output(vm.read_param(x))
                       vm.pc += 2
                     },
                     ->(vm: VM, instr: Int32) {
-                      "OUTPUT %4s" % [Opcode.debug_parameter_value(vm, instr, 1)]
+                      "OUTPUT %4s" % Opcode.debug_parameters(vm, instr, 1)
                     }),
     5 => Opcode.new(:jt,
                     3,
                     ->(vm: VM, instr: Int32) {
-                      x = Opcode.get_read_parameter_value(vm, instr, 1)
-                      dest = Opcode.get_read_parameter_value(vm, instr, 2)
-                      if x != 0
-                        vm.pc = dest
+                      x, dest = Opcode.get_parameters(vm, instr, 2)
+                      if vm.read_param(x) != 0
+                        vm.pc = vm.read_param(dest)
                       else
                         vm.pc += 3
                       end
                     },
                     ->(vm: VM, instr: Int32) {
-                      "JT  %4s, %4s" % [Opcode.debug_parameter_value(vm, instr, 1),
-                                        Opcode.debug_parameter_value(vm, instr, 2)]
+                      "JT  %4s, %4s" % Opcode.debug_parameters(vm, instr, 2)
                     }),
     6 => Opcode.new(:jf,
                     3,
                     ->(vm: VM, instr: Int32) {
-                      x = Opcode.get_read_parameter_value(vm, instr, 1)
-                      dest = Opcode.get_read_parameter_value(vm, instr, 2)
-                      if x == 0
-                        vm.pc = dest
+                      x, dest = Opcode.get_parameters(vm, instr, 2)
+                      if vm.read_param(x) == 0
+                        vm.pc = vm.read_param(dest)
                       else
                         vm.pc += 3
                       end
                     },
                     ->(vm: VM, instr: Int32) {
-                      "JF  %4s, %4s" % [Opcode.debug_parameter_value(vm, instr, 1),
-                                        Opcode.debug_parameter_value(vm, instr, 2)]
+                      "JF  %4s, %4s" % Opcode.debug_parameters(vm, instr, 2)
                     }),
     7 => Opcode.new(:lt,
                     4,
                     ->(vm: VM, instr: Int32) {
-                      x = Opcode.get_read_parameter_value(vm, instr, 1)
-                      y = Opcode.get_read_parameter_value(vm, instr, 2)
-                      dest = Opcode.get_write_parameter_address(vm, instr, 3)
-                      if x < y
-                        vm.mem[dest] = 1
+                      x, y, dest = Opcode.get_parameters(vm, instr, 3)
+                      if vm.read_param(x) < vm.read_param(y)
+                        vm.write_param_value(dest, 1)
                       else
-                        vm.mem[dest] = 0
+                        vm.write_param_value(dest, 0)
                       end
                       vm.pc += 4
                     },
                     ->(vm: VM, instr: Int32) {
-                      "LT  %4s, %4s -> %4s" % [Opcode.debug_parameter_value(vm, instr, 1),
-                                               Opcode.debug_parameter_value(vm, instr, 2),
-                                               Opcode.debug_parameter_value(vm, instr, 3)]
+                      "LT  %4s, %4s -> %4s" % Opcode.debug_parameters(vm, instr, 3)
                     }),
     8 => Opcode.new(:eq,
                     4,
                     ->(vm: VM, instr: Int32) {
-                      x = Opcode.get_read_parameter_value(vm, instr, 1)
-                      y = Opcode.get_read_parameter_value(vm, instr, 2)
-                      dest = Opcode.get_write_parameter_address(vm, instr, 3)
-                      if x == y
-                        vm.mem[dest] = 1
+                      x, y, dest = Opcode.get_parameters(vm, instr, 3)
+                      if vm.read_param(x) == vm.read_param(y)
+                        vm.write_param_value(dest, 1)
                       else
-                        vm.mem[dest] = 0
+                        vm.write_param_value(dest, 0)
                       end
                       vm.pc += 4
                     },
                     ->(vm: VM, instr: Int32) {
-                      "EQ  %4s, %4s -> %4s" % [Opcode.debug_parameter_value(vm, instr, 1),
-                                               Opcode.debug_parameter_value(vm, instr, 2),
-                                               Opcode.debug_parameter_value(vm, instr, 3)]
+                      "EQ  %4s, %4s -> %4s" % Opcode.debug_parameters(vm, instr, 3)
                     }),
     99 => Opcode.new(:halt,
                      1,
