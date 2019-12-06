@@ -33,8 +33,6 @@ module Intcode
       disasm.call(vm, params)
     end
 
-    # Static methods
-
     # Get the opcode and addressing modes for a given instruction, returns a
     # tuple with the Opcode instance and an array of addressing mode symbols
     def self.get_opcode_and_modes(instr : Int32)
@@ -104,14 +102,6 @@ module Intcode
       @mem = mem #Array.new(4096, 0)
       @inputs = [] of Int32
       @outputs = [] of Int32
-    end
-
-    def self.from_file(filename)
-      VM.new(Intcode.load_file(filename))
-    end
-
-    def self.from_string(str)
-      VM.new(Intcode.read_intcode(str))
     end
 
     # Get the value of the provided parameter, based on the addressing mode
@@ -188,6 +178,14 @@ module Intcode
     def write_output(val)
       outputs << val
       Intcode.log "%50s" % "> #{val}"
+    end
+
+    def self.from_file(filename)
+      VM.new(Intcode.load_file(filename))
+    end
+
+    def self.from_string(str)
+      VM.new(Intcode.read_intcode(str))
     end
   end
 
@@ -313,18 +311,6 @@ module Intcode
   # Load an Intcode program from a filename, returned as an array of Integers
   def self.load_file(filename)
     read_intcode(File.read(filename))
-  end
-
-  # Load an Intcode VM from a string
-  def self.load_vm_from_string(str)
-    mem = read_intcode(str)
-    VM.new(mem)
-  end
-
-  # Load an Intcode VM from a file
-  def self.load_vm_from_file(filename)
-    mem = load_file(filename)
-    VM.new(mem)
   end
 
   # Enable or disable verbose debug logging during execution
