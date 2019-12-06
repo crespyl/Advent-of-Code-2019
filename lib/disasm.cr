@@ -6,7 +6,7 @@ module Disasm
     vm = Intcode::VM.new(intcode)
     address = 0
 
-    result = String.build do |str|
+    String.build do |str|
       while address < vm.mem.size
         begin
           opcode, params = Intcode::Opcode.get_opcode_and_params(vm, address)
@@ -18,7 +18,5 @@ module Disasm
         end
       end
     end
-
-    return result
   end
 end
