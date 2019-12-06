@@ -14,20 +14,12 @@ class Node
   end
 
   def to_s
-    if self.is_root?
-      "COM"
-    else
-      "%s)%s" % [parent.name, name]
-    end
+    name
   end
 
   # get depth to root
   def get_depth
-    if self.is_root?
-      return 0
-    else
-      return 1 + parent.get_depth
-    end
+    get_parents.size
   end
 
   def get_parents
@@ -55,7 +47,7 @@ def find_or_make_node(map, name)
 end
 
 def count_orbits(map)
-  nodes.values.reduce(0) { |sum,node| sum + node.get_depth }
+  map.values.reduce(0) { |sum,node| sum + node.get_depth }
 end
 
 def find_common_parent(map, node1, node2)
@@ -68,11 +60,12 @@ def find_common_parent(map, node1, node2)
   common.first
 end
 
+# Build our map
+
 nodes = {}
 nodes["COM"] = Node.new("COM", nil)
 
 input = ARGV.size > 0 ? ARGV[0] : "day5/sample.txt"
-
 File.readlines(input).each do |line|
   n1, n2 = line.split(")").map{ |n| n.strip }
   node1 = find_or_make_node(nodes, n1)
@@ -80,8 +73,14 @@ File.readlines(input).each do |line|
   node2.parent = node1
 end
 
+# Part 1, find and sum the depth of each node
+puts "Part 1"
+puts nodes.values.reduce(0) { |sum, node| sum + node.get_depth }
+
+# Part 2, find the distance between YOU and SAN
+puts "Part 2"
 common = find_common_parent(nodes, nodes["YOU"], nodes["SAN"])
 path_dist = (nodes["YOU"].get_depth - common.get_depth) + (nodes["SAN"].get_depth - common.get_depth)
-puts path_dist-2
+puts path_dist-2 # subtract two since we're counting *transfers*, we don't
+                 # "transfer" from our start/end nodes
 
-puts "!"
