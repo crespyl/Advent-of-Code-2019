@@ -12,7 +12,7 @@ module Intcode
     property impl : Proc(VM, Array(Parameter), Int32)
     property disasm : Proc(VM, Array(Parameter), String)
 
-    def initialize(@sym, @size, @impl : Proc(VM, Array(Parameter), Int32), @disasm)
+    def initialize(@sym, @size, @impl, @disasm)
     end
 
     # We use opcode size to indicate both how far the PC should move after
