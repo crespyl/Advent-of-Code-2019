@@ -87,6 +87,9 @@ module Intcode
   # This class holds the current state of a running interpreter: the memory
   # (Array(Int32)), the program counter, and a "halted/running" flag
   class VM
+    # Name
+    attr_accessor :name
+
     # Memory
     attr_accessor :mem
 
@@ -101,7 +104,8 @@ module Intcode
     attr_accessor :inputs
     attr_accessor :outputs
 
-    def initialize(mem)
+    def initialize(mem,name="VM")
+      @name = name
       @pc = 0
       @halted = false
       @needs_input = false
@@ -170,6 +174,19 @@ module Intcode
       end
     end
 
+    # Get the status of the VM
+    def status
+      if @halted
+        :halted
+      elsif @needs_input
+        :needs_input
+      elsif @pc >= @mem.size
+        :pc_range_err
+      else
+        :ok
+      end
+    end
+
     def send_input(val)
       inputs << val
       @needs_input = false
@@ -184,6 +201,15 @@ module Intcode
         @needs_input = true
         Intcode.log "NEED INPUT"
         return nil
+      end
+    end
+
+    # Read a value from the amps output buffer, or 0 if the buffer is empty
+    def read_output()
+      if outputs.size > 0
+        outputs.shift
+      else
+        nil
       end
     end
 

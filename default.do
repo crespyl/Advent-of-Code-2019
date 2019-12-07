@@ -11,7 +11,7 @@ if [ -e $SRC/$SRC.cr ]; then
   redo-ifchange $SRC/$SRC.cr
 
   # quick hack to get the list of local deps from the file
-  deps=$(egrep -o '^require "../lib/.+"' $SRC/$SRC.cr | sed -rn 's/require\s+"..\/(.+)"/\1/p')
+  deps=$(./lib/crystaldeps.rb $SRC/$SRC.cr)
   echo $deps | xargs redo-ifchange
 
   crystal build --$MODE -Dpreview_mt $SRC/$SRC.cr -o $3

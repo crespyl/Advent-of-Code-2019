@@ -1,11 +1,11 @@
-#!/usr/bin/env crystal
-require "../lib/intcode.cr"
+#!/usr/bin/env ruby
+require_relative "../lib/intcode.rb"
 
 Intcode.set_debug(ENV.has_key?("AOC_DEBUG") ? ENV["AOC_DEBUG"] == "true" : false)
 
 # Create 5 amplifier progras
 def make_amps(phase_settings, custom_prg = "")
-  phase_settings.map_with_index { |phase_setting, i|
+  phase_settings.each_with_index.map { |phase_setting, i|
     if custom_prg.empty?
       vm = Intcode::VM.from_file("day7/input.txt")
     else
@@ -24,7 +24,7 @@ end
 # vm Y
 #
 # Returns the last output of the final vm
-def run_linked_vms(vms, links : Hash(Int32,Int32))
+def run_linked_vms(vms, links)
   # vms can be halted, input blocked, or ready; we keep working until all have
   # halted
   while vms.any? { |amp| amp.status != :halted }
@@ -50,7 +50,7 @@ end
 # Test each permutation of an input set and find the best
 def find_best(inputs, runner)
   best_settings, best_output = inputs, 0
-  inputs.each_permutation do |p|
+  inputs.permutation.each do |p|
     amps = make_amps(p)
     amps[0].send_input(0)
     output = runner.call(amps)
@@ -68,7 +68,7 @@ def find_best_serial(inputs)
            2 => 1,
            3 => 2,
            4 => 3}
-  find_best(inputs, ->(amps: Array(Intcode::VM)) { run_linked_vms(amps, links) })
+  find_best(inputs, ->(amps) { run_linked_vms(amps, links) })
 end
 
 def find_best_feedback(inputs)
@@ -77,7 +77,7 @@ def find_best_feedback(inputs)
            2 => 1,
            3 => 2,
            4 => 3}
-  find_best(inputs, ->(amps: Array(Intcode::VM)) { run_linked_vms(amps, links) })
+  find_best(inputs, ->(amps) { run_linked_vms(amps, links) })
 end
 
 inputs = [0,1,2,3,4]
