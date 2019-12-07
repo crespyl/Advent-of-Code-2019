@@ -57,6 +57,55 @@ def run_linked_vms(vms, links : Hash(Int32,Int32))
   return vms.last.read_output
 end
 
+# Run each vm in an async Fiber and connects their outputs and inputs as
+# indicated by the link pairs
+#
+# Each pair (x,y) indicates that vm X should read its input from the output of
+# vm Y
+#
+# Returns the last output of the final vm
+def run_async_vms(vms, links)
+  halts = Channel(Bool).new
+  channels = vms.map { |vm| Channel(Int32).new(1) } # channels have a buffer so
+                                                    # that the final send
+                                                    # doesn't block waiting for
+                                                    # a halted machine to read
+  vms.each_with_index do |vm,i|
+    spawn {
+      while true
+        case vm.status
+        when :ok
+          vm.run
+        when :needs_input
+          if links[i]?
+            vm.send_input(channels[links[i]].receive)
+            vm.run
+          else # needs input but there's no linked vm to read it from
+            break
+          end
+        when :halted
+          break
+        end
+
+        # send any output to the channel
+        while output = vm.read_output
+          channels[i].send(output)
+        end
+      end
+
+      channels[i].close
+      halts.send(true)
+    }
+  end
+
+  # wait until all machines have halted
+  (channels.size).times do
+    halts.receive
+  end
+
+  channels.last.receive
+end
+
 # Test each permutation of an input set and find the best
 def find_best(inputs, runner)
   best_settings, best_output = inputs, 0
@@ -78,7 +127,7 @@ def find_best_serial(inputs)
            2 => 1,
            3 => 2,
            4 => 3}
-  find_best(inputs, ->(amps: Array(Intcode::VM)) { run_linked_vms(amps, links) })
+  find_best(inputs, ->(amps: Array(Intcode::VM)) { run_async_vms(amps, links) })
 end
 
 def find_best_feedback(inputs)
@@ -87,7 +136,7 @@ def find_best_feedback(inputs)
            2 => 1,
            3 => 2,
            4 => 3}
-  find_best(inputs, ->(amps: Array(Intcode::VM)) { run_linked_vms(amps, links) })
+  find_best(inputs, ->(amps: Array(Intcode::VM)) { run_async_vms(amps, links) })
 end
 
 puts "Part 1"
@@ -109,4 +158,4 @@ puts "Best Output: #{best_output}"
 #          4 => 3}
 # amps = make_amps([5, 8, 9, 7, 6])
 # amps[0].send_input(0)
-# puts run_linked_vms(amps, links)
+# puts run_async_vms(amps, links)
