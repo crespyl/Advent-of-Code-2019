@@ -154,10 +154,32 @@ module Intcode
       end
     end
 
+    # Get the status of the VM
+    def status
+      if @halted
+        :halted
+      elsif @needs_input
+        :needs_input
+      elsif @pc >= @mem.size
+        :pc_range_err
+      else
+        :ok
+      end
+    end
+
     # Add a value to the back of the input buffer
     def send_input(val : Int32)
       inputs << val
       @needs_input = false
+    end
+
+    # Read a value from the amps output buffer, or 0 if the buffer is empty
+    def read_output()
+      if outputs.size > 0
+        outputs.shift
+      else
+        nil
+      end
     end
 
     # Remove and return a value from the front of the input buffer.
