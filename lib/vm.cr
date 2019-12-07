@@ -64,7 +64,7 @@ module Intcode
     # Returns a Symbol with the machine status after execution stops for any
     # reason, see `VM#status` for details
     def run
-      log("Running...")
+      log("Running...") if status == :ok
 
       while status == :ok
         # fetch the next Opcode and its Parameters
@@ -75,7 +75,7 @@ module Intcode
         opcode.exec(self, params)
       end
 
-      log("Stopped")
+      log("Stopped (#{status})")
       return status
     end
 
@@ -126,7 +126,6 @@ module Intcode
         return input
       else
         @needs_input = true
-        log "NEED INPUT"
         return nil
       end
     end

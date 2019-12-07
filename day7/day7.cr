@@ -1,4 +1,5 @@
 #!/usr/bin/env crystal
+require "colorize"
 require "../lib/intcode.cr"
 
 Intcode.set_debug(ENV.has_key?("AOC_DEBUG") ? ENV["AOC_DEBUG"] == "true" : false)
@@ -11,10 +12,18 @@ def make_amps(phase_settings, custom_prg = "")
     else
       vm = Intcode::VM.from_string(custom_prg)
     end
-    vm.name = "Amp-#{i}"
+    vm.name = colorize_name("Amp-#{i}")
     vm.send_input(phase_setting)
     vm
   }
+end
+
+# Utility fn to make colorized amp names for debugging
+def colorize_name(name)
+  r =  [rand(UInt8), UInt8.new(100)].max
+  g =  [rand(UInt8), UInt8.new(100)].max
+  b =  [rand(UInt8), UInt8.new(100)].max
+  name.colorize(Colorize::ColorRGB.new(r,g,b)).to_s
 end
 
 # Run each vm and connects their outputs and inputs as indicated by the link
@@ -80,10 +89,9 @@ def find_best_feedback(inputs)
   find_best(inputs, ->(amps: Array(Intcode::VM)) { run_linked_vms(amps, links) })
 end
 
+puts "Part 1"
 inputs = [0,1,2,3,4]
 best_settings, best_output = find_best_serial(inputs)
-
-puts "Part 1"
 puts "Best Settings: #{best_settings}"
 puts "Best Output: #{best_output}"
 
@@ -93,10 +101,11 @@ best_settings, best_output = find_best_feedback(inputs)
 puts "Best Settings: #{best_settings}"
 puts "Best Output: #{best_output}"
 
-# links = {1 => 0,
+# links = {0 => 4,
+#          1 => 0,
 #          2 => 1,
 #          3 => 2,
 #          4 => 3}
-# amps = make_amps([4,2,3,0,1])
+# amps = make_amps([5, 8, 9, 7, 6])
 # amps[0].send_input(0)
 # puts run_linked_vms(amps, links)
