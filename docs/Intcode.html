@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="generator" content="Crystal Docs 0.30.1">
+
+
+<link href="css/style.css" rel="stylesheet" type="text/css">
+
+<script type="text/javascript" src="js/doc.js"></script>
+<script type="text/javascript">
+  CrystalDoc.base_path = "";
+</script>
+
+  <meta id="repository-name" content="github.com/crespyl/Advent-of-Code-2019">
+  <title>Intcode - github.com/crespyl/Advent-of-Code-2019</title>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-header">
+    <div class="search-box">
+      <input type="search" class="search-input" placeholder="Search..." spellcheck="false" aria-label="Search">
+    </div>
+
+    <div class="repository-links">
+      <a href="index.html">README</a>
+    </div>
+  </div>
+
+  <div class="search-results" class="hidden">
+    <ul class="search-list"></ul>
+  </div>
+
+  <div class="types-list">
+    <ul>
+  
+  <li class="parent open current" data-id="github.com/crespyl/Advent-of-Code-2019/Intcode" data-name="intcode">
+      <a href="Intcode.html">Intcode</a>
+      
+        <ul>
+  
+  <li class=" " data-id="github.com/crespyl/Advent-of-Code-2019/Intcode/Opcode" data-name="intcode::opcode">
+      <a href="Intcode/Opcode.html">Opcode</a>
+      
+    </li>
+  
+  <li class=" " data-id="github.com/crespyl/Advent-of-Code-2019/Intcode/Parameter" data-name="intcode::parameter">
+      <a href="Intcode/Parameter.html">Parameter</a>
+      
+    </li>
+  
+  <li class=" " data-id="github.com/crespyl/Advent-of-Code-2019/Intcode/VM" data-name="intcode::vm">
+      <a href="Intcode/VM.html">VM</a>
+      
+    </li>
+  
+</ul>
+
+      
+    </li>
+  
+</ul>
+
+  </div>
+</div>
+
+
+<div class="main-content">
+<h1 class="type-name">
+
+  <span class="kind">module</span> Intcode
+
+</h1>
+
+
+
+
+
+  <h2>Overview</h2>
+
+  <p>This module defines the "Intcode" interpreter and several utility functions
+for dealing with opcodes and parameter handling</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <h2>Defined in:</h2>
+  
+    
+      <a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/opcodes.cr#L3" target="_blank">
+        lib/opcodes.cr
+      </a>
+    
+    <br/>
+  
+    
+      <a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/vm.cr#L3" target="_blank">
+        lib/vm.cr
+      </a>
+    
+    <br/>
+  
+    
+      <a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/intcode.cr#L6" target="_blank">
+        lib/intcode.cr
+      </a>
+    
+    <br/>
+  
+
+
+
+  
+    <h2>Constant Summary</h2>
+  
+  <dl>
+    
+      <dt class="entry-const" id="OPCODES">
+        <strong>OPCODES</strong> = <code>{<span class="n">1</span> => <span class="t">Opcode</span>.<span class="k">new</span>(<span class="n">:add</span>, <span class="n">4</span>, ->(vm : <span class="t">VM</span>, params : <span class="t">Array</span>(<span class="t">Parameter</span>)) <span class="k">do</span>
+  x, y, dest <span class="o">=</span> params
+  vm.write_param_value(dest, (vm.read_param(x)) <span class="o">+</span> (vm.read_param(y)))
+  vm.pc <span class="o">=</span> vm.pc <span class="o">+</span> (params.size <span class="o">+</span> <span class="n">1</span>)
+<span class="k">end</span>, ->(vm : <span class="t">VM</span>, params : <span class="t">Array</span>(<span class="t">Parameter</span>)) <span class="k">do</span>
+  <span class="s">&quot;ADD %5s, %5s -&gt; %5s&quot;</span> <span class="o">%</span> params.map <span class="k">do</span> <span class="o">|</span>p<span class="o">|</span>
+    p.debug
+  <span class="k">end</span>
+<span class="k">end</span>), <span class="n">2</span> => <span class="t">Opcode</span>.<span class="k">new</span>(<span class="n">:mul</span>, <span class="n">4</span>, ->(vm : <span class="t">VM</span>, params : <span class="t">Array</span>(<span class="t">Parameter</span>)) <span class="k">do</span>
+  x, y, dest <span class="o">=</span> params
+  vm.write_param_value(dest, (vm.read_param(x)) <span class="o">*</span> (vm.read_param(y)))
+  vm.pc <span class="o">=</span> vm.pc <span class="o">+</span> (params.size <span class="o">+</span> <span class="n">1</span>)
+<span class="k">end</span>, ->(vm : <span class="t">VM</span>, params : <span class="t">Array</span>(<span class="t">Parameter</span>)) <span class="k">do</span>
+  <span class="s">&quot;MUL %5s, %5s -&gt; %5s&quot;</span> <span class="o">%</span> params.map <span class="k">do</span> <span class="o">|</span>p<span class="o">|</span>
+    p.debug
+  <span class="k">end</span>
+<span class="k">end</span>), <span class="n">3</span> => <span class="t">Opcode</span>.<span class="k">new</span>(<span class="n">:input</span>, <span class="n">2</span>, ->(vm : <span class="t">VM</span>, params : <span class="t">Array</span>(<span class="t">Parameter</span>)) <span class="k">do</span>
+  dest <span class="o">=</span> params.first
+  <span class="k">if</span> input <span class="o">=</span> vm.get_input
+    vm.write_param_value(dest, input)
+    vm.pc <span class="o">=</span> vm.pc <span class="o">+</span> (params.size <span class="o">+</span> <span class="n">1</span>)
+  <span class="k">else</span>
+    <span class="n">0</span>
+  <span class="k">end</span>
+<span class="k">end</span>, ->(vm : <span class="t">VM</span>, params : <span class="t">Array</span>(<span class="t">Parameter</span>)) <span class="k">do</span>
+  <span class="s">&quot;IN  -&gt; %5s&quot;</span> <span class="o">%</span> params.map <span class="k">do</span> <span class="o">|</span>p<span class="o">|</span>
+    p.debug
+  <span class="k">end</span>
+<span class="k">end</span>), <span class="n">4</span> => <span class="t">Opcode</span>.<span class="k">new</span>(<span class="n">:output</span>, <span class="n">2</span>, ->(vm : <span class="t">VM</span>, params : <span class="t">Array</span>(<span class="t">Parameter</span>)) <span class="k">do</span>
+  x <span class="o">=</span> params.first
+  vm.write_output(vm.read_param(x))
+  vm.pc <span class="o">=</span> vm.pc <span class="o">+</span> (params.size <span class="o">+</span> <span class="n">1</span>)
+<span class="k">end</span>, ->(vm : <span class="t">VM</span>, params : <span class="t">Array</span>(<span class="t">Parameter</span>)) <span class="k">do</span>
+  <span class="s">&quot;OUT %5s&quot;</span> <span class="o">%</span> params.map <span class="k">do</span> <span class="o">|</span>p<span class="o">|</span>
+    p.debug
+  <span class="k">end</span>
+<span class="k">end</span>), <span class="n">5</span> => <span class="t">Opcode</span>.<span class="k">new</span>(<span class="n">:jt</span>, <span class="n">3</span>, ->(vm : <span class="t">VM</span>, params : <span class="t">Array</span>(<span class="t">Parameter</span>)) <span class="k">do</span>
+  x, dest <span class="o">=</span> params
+  <span class="k">if</span> (vm.read_param(x)) <span class="o">!=</span> <span class="n">0</span>
+    vm.pc <span class="o">=</span> vm.read_param(dest)
+  <span class="k">else</span>
+    vm.pc <span class="o">=</span> vm.pc <span class="o">+</span> (params.size <span class="o">+</span> <span class="n">1</span>)
+  <span class="k">end</span>
+<span class="k">end</span>, ->(vm : <span class="t">VM</span>, params : <span class="t">Array</span>(<span class="t">Parameter</span>)) <span class="k">do</span>
+  <span class="s">&quot;JT  %5s, %5s&quot;</span> <span class="o">%</span> params.map <span class="k">do</span> <span class="o">|</span>p<span class="o">|</span>
+    p.debug
+  <span class="k">end</span>
+<span class="k">end</span>), <span class="n">6</span> => <span class="t">Opcode</span>.<span class="k">new</span>(<span class="n">:jf</span>, <span class="n">3</span>, ->(vm : <span class="t">VM</span>, params : <span class="t">Array</span>(<span class="t">Parameter</span>)) <span class="k">do</span>
+  x, dest <span class="o">=</span> params
+  <span class="k">if</span> (vm.read_param(x)) <span class="o">==</span> <span class="n">0</span>
+    vm.pc <span class="o">=</span> vm.read_param(dest)
+  <span class="k">else</span>
+    vm.pc <span class="o">=</span> vm.pc <span class="o">+</span> (params.size <span class="o">+</span> <span class="n">1</span>)
+  <span class="k">end</span>
+<span class="k">end</span>, ->(vm : <span class="t">VM</span>, params : <span class="t">Array</span>(<span class="t">Parameter</span>)) <span class="k">do</span>
+  <span class="s">&quot;JF  %5s, %5s&quot;</span> <span class="o">%</span> params.map <span class="k">do</span> <span class="o">|</span>p<span class="o">|</span>
+    p.debug
+  <span class="k">end</span>
+<span class="k">end</span>), <span class="n">7</span> => <span class="t">Opcode</span>.<span class="k">new</span>(<span class="n">:lt</span>, <span class="n">4</span>, ->(vm : <span class="t">VM</span>, params : <span class="t">Array</span>(<span class="t">Parameter</span>)) <span class="k">do</span>
+  x, y, dest <span class="o">=</span> params
+  <span class="k">if</span> (vm.read_param(x)) <span class="o">&lt;</span> (vm.read_param(y))
+    vm.write_param_value(dest, <span class="n">1</span>)
+  <span class="k">else</span>
+    vm.write_param_value(dest, <span class="n">0</span>)
+  <span class="k">end</span>
+  vm.pc <span class="o">=</span> vm.pc <span class="o">+</span> (params.size <span class="o">+</span> <span class="n">1</span>)
+<span class="k">end</span>, ->(vm : <span class="t">VM</span>, params : <span class="t">Array</span>(<span class="t">Parameter</span>)) <span class="k">do</span>
+  <span class="s">&quot;LT  %5s, %5s -&gt; %5s&quot;</span> <span class="o">%</span> params.map <span class="k">do</span> <span class="o">|</span>p<span class="o">|</span>
+    p.debug
+  <span class="k">end</span>
+<span class="k">end</span>), <span class="n">8</span> => <span class="t">Opcode</span>.<span class="k">new</span>(<span class="n">:eq</span>, <span class="n">4</span>, ->(vm : <span class="t">VM</span>, params : <span class="t">Array</span>(<span class="t">Parameter</span>)) <span class="k">do</span>
+  x, y, dest <span class="o">=</span> params
+  <span class="k">if</span> (vm.read_param(x)) <span class="o">==</span> (vm.read_param(y))
+    vm.write_param_value(dest, <span class="n">1</span>)
+  <span class="k">else</span>
+    vm.write_param_value(dest, <span class="n">0</span>)
+  <span class="k">end</span>
+  vm.pc <span class="o">=</span> vm.pc <span class="o">+</span> <span class="n">4</span>
+<span class="k">end</span>, ->(vm : <span class="t">VM</span>, params : <span class="t">Array</span>(<span class="t">Parameter</span>)) <span class="k">do</span>
+  <span class="s">&quot;EQ  %5s, %5s -&gt; %5s&quot;</span> <span class="o">%</span> params.map <span class="k">do</span> <span class="o">|</span>p<span class="o">|</span>
+    p.debug
+  <span class="k">end</span>
+<span class="k">end</span>), <span class="n">99</span> => <span class="t">Opcode</span>.<span class="k">new</span>(<span class="n">:halt</span>, <span class="n">1</span>, ->(vm : <span class="t">VM</span>, params : <span class="t">Array</span>(<span class="t">Parameter</span>)) <span class="k">do</span>
+  vm.halted <span class="o">=</span> <span class="n">true</span>
+  <span class="n">1</span>
+<span class="k">end</span>, ->(vm : <span class="t">VM</span>, params : <span class="t">Array</span>(<span class="t">Parameter</span>)) <span class="k">do</span>
+  <span class="s">&quot;HALT&quot;</span>
+<span class="k">end</span>)}</code>
+      </dt>
+      
+      <dd class="entry-const-doc">
+        <p>Here we define the mapping from integer to <code><a href="Intcode/Opcode.html">Opcode</a></code>, along with the actual
+implementation of each as a <code>Proc</code></p>
+      </dd>
+      
+    
+  </dl>
+
+
+
+
+
+  <h2>Class Method Summary</h2>
+  <ul class="list-summary">
+    
+      <li class="entry-summary">
+        <a href="#load_file(filename)-class-method" class="signature"><strong>.load_file</strong>(filename)</a>
+        
+          <div class="summary"><p>Load an Intcode program from a filename, returned as an array of Integers</p></div>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#log(msg)-class-method" class="signature"><strong>.log</strong>(msg)</a>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#read_intcode(str)-class-method" class="signature"><strong>.read_intcode</strong>(str)</a>
+        
+          <div class="summary"><p>Parse the input string into an array of integers</p></div>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#set_debug(enable_debug)-class-method" class="signature"><strong>.set_debug</strong>(enable_debug)</a>
+        
+          <div class="summary"><p>Enable or disable verbose debug logging during execution</p></div>
+        
+      </li>
+    
+  </ul>
+
+
+
+
+
+
+
+<div class="methods-inherited">
+  
+</div>
+
+
+
+
+  <h2>Class Method Detail</h2>
+  
+    <div class="entry-detail" id="load_file(filename)-class-method">
+      <div class="signature">
+        
+        def self.<strong>load_file</strong>(filename)
+
+        <a class="method-permalink" href="#load_file(filename)-class-method">#</a>
+      </div>
+      
+        <div class="doc">
+          
+          <p>Load an Intcode program from a filename, returned as an array of Integers</p>
+        </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/intcode.cr#L17" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="log(msg)-class-method">
+      <div class="signature">
+        
+        def self.<strong>log</strong>(msg)
+
+        <a class="method-permalink" href="#log(msg)-class-method">#</a>
+      </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/intcode.cr#L26" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="read_intcode(str)-class-method">
+      <div class="signature">
+        
+        def self.<strong>read_intcode</strong>(str)
+
+        <a class="method-permalink" href="#read_intcode(str)-class-method">#</a>
+      </div>
+      
+        <div class="doc">
+          
+          <p>Parse the input string into an array of integers</p>
+        </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/intcode.cr#L10" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="set_debug(enable_debug)-class-method">
+      <div class="signature">
+        
+        def self.<strong>set_debug</strong>(enable_debug)
+
+        <a class="method-permalink" href="#set_debug(enable_debug)-class-method">#</a>
+      </div>
+      
+        <div class="doc">
+          
+          <p>Enable or disable verbose debug logging during execution</p>
+        </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/intcode.cr#L22" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+
+
+
+
+
+
+</div>
+
+</body>
+</html>

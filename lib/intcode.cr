@@ -26,4 +26,25 @@ module Intcode
   def self.log(msg)
     puts msg if @@DEBUG
   end
+
+  # Represents an encoded parameter and its addressing mode, used by both the VM
+  # and Opcodes
+  struct Parameter
+    property val : Int32   # The original value in memory
+    property mode : Symbol # The addressing mode
+
+    def initialize(@mode, @val) end
+
+    # Return a debug string indicating the mode and value, used for debug and
+    # disasm
+    def debug
+      case mode
+      when :position then "@#{val}"
+      when :literal then "#{val}"
+      else
+        "?#{mode}:#{val}"
+      end
+    end
+  end
+
 end

@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="generator" content="Crystal Docs 0.30.1">
+
+
+<link href="../css/style.css" rel="stylesheet" type="text/css">
+
+<script type="text/javascript" src="../js/doc.js"></script>
+<script type="text/javascript">
+  CrystalDoc.base_path = "../";
+</script>
+
+  <meta id="repository-name" content="github.com/crespyl/Advent-of-Code-2019">
+  <title>Intcode::Opcode - github.com/crespyl/Advent-of-Code-2019</title>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-header">
+    <div class="search-box">
+      <input type="search" class="search-input" placeholder="Search..." spellcheck="false" aria-label="Search">
+    </div>
+
+    <div class="repository-links">
+      <a href="../index.html">README</a>
+    </div>
+  </div>
+
+  <div class="search-results" class="hidden">
+    <ul class="search-list"></ul>
+  </div>
+
+  <div class="types-list">
+    <ul>
+  
+  <li class="parent open current" data-id="github.com/crespyl/Advent-of-Code-2019/Intcode" data-name="intcode">
+      <a href="../Intcode.html">Intcode</a>
+      
+        <ul>
+  
+  <li class=" current" data-id="github.com/crespyl/Advent-of-Code-2019/Intcode/Opcode" data-name="intcode::opcode">
+      <a href="../Intcode/Opcode.html">Opcode</a>
+      
+    </li>
+  
+  <li class=" " data-id="github.com/crespyl/Advent-of-Code-2019/Intcode/Parameter" data-name="intcode::parameter">
+      <a href="../Intcode/Parameter.html">Parameter</a>
+      
+    </li>
+  
+  <li class=" " data-id="github.com/crespyl/Advent-of-Code-2019/Intcode/VM" data-name="intcode::vm">
+      <a href="../Intcode/VM.html">VM</a>
+      
+    </li>
+  
+</ul>
+
+      
+    </li>
+  
+</ul>
+
+  </div>
+</div>
+
+
+<div class="main-content">
+<h1 class="type-name">
+
+  <span class="kind">class</span> Intcode::Opcode
+
+</h1>
+
+
+  <ul class="superclass-hierarchy"><li class="superclass"><a href="../Intcode/Opcode.html">Intcode::Opcode</a></li><li class="superclass">Reference</li><li class="superclass">Object</li></ul>
+
+
+
+
+  <h2>Overview</h2>
+
+  <p>Each supported opcode is represented as instance of the Opcode class, with
+the implementation attached as a Proc, along with a function to generate
+simplistic human-readable string for debugging</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <h2>Defined in:</h2>
+  
+    
+      <a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/opcodes.cr#L7" target="_blank">
+        lib/opcodes.cr
+      </a>
+    
+    <br/>
+  
+
+
+
+
+
+  <h2>Constructors</h2>
+  <ul class="list-summary">
+    
+      <li class="entry-summary">
+        <a href="#new(sym,size,impl,disasm)-class-method" class="signature"><strong>.new</strong>(sym, size, impl, disasm)</a>
+        
+      </li>
+    
+  </ul>
+
+
+
+  <h2>Class Method Summary</h2>
+  <ul class="list-summary">
+    
+      <li class="entry-summary">
+        <a href="#get_opcode_and_params(vm:VM,address:Int32)-class-method" class="signature"><strong>.get_opcode_and_params</strong>(vm : VM, address : Int32)</a>
+        
+          <div class="summary"><p>Returns a tuple with the <code><a href="../Intcode/Opcode.html">Opcode</a></code> corresponding to the instruction at the <em>address</em> and an array holding the <code><a href="../Intcode/Parameter.html">Parameter</a></code>s that follow it</p></div>
+        
+      </li>
+    
+  </ul>
+
+
+
+  <h2>Instance Method Summary</h2>
+  <ul class="list-summary">
+    
+      <li class="entry-summary">
+        <a href="#debug(vm,params)-instance-method" class="signature"><strong>#debug</strong>(vm, params)</a>
+        
+          <div class="summary"><p>Return a (more or less) human-readable string describing this instruction</p></div>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#disasm:Proc(VM,Array(Parameter),String)-instance-method" class="signature"><strong>#disasm</strong> : Proc(VM, Array(Parameter), String)</a>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#disasm=(disasm:Proc(VM,Array(Parameter),String))-instance-method" class="signature"><strong>#disasm=</strong>(disasm : Proc(VM, Array(Parameter), String))</a>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#exec(vm,params)-instance-method" class="signature"><strong>#exec</strong>(vm, params)</a>
+        
+          <div class="summary"><p>Execute this opcode in the context of the given VM, with the provided params.</p></div>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#impl:Proc(VM,Array(Parameter),Int32)-instance-method" class="signature"><strong>#impl</strong> : Proc(VM, Array(Parameter), Int32)</a>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#impl=(impl:Proc(VM,Array(Parameter),Int32))-instance-method" class="signature"><strong>#impl=</strong>(impl : Proc(VM, Array(Parameter), Int32))</a>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#num_params-instance-method" class="signature"><strong>#num_params</strong></a>
+        
+          <div class="summary"><p>We use opcode size to indicate both how far the PC should move after execution and the number of parameters.</p></div>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#size:Int32-instance-method" class="signature"><strong>#size</strong> : Int32</a>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#size=(size:Int32)-instance-method" class="signature"><strong>#size=</strong>(size : Int32)</a>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#sym:Symbol-instance-method" class="signature"><strong>#sym</strong> : Symbol</a>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#sym=(sym:Symbol)-instance-method" class="signature"><strong>#sym=</strong>(sym : Symbol)</a>
+        
+      </li>
+    
+  </ul>
+
+
+
+
+
+<div class="methods-inherited">
+  
+    
+
+
+    
+
+
+    
+
+
+  
+    
+
+
+    
+
+
+    
+
+
+  
+</div>
+
+
+  <h2>Constructor Detail</h2>
+  
+    <div class="entry-detail" id="new(sym,size,impl,disasm)-class-method">
+      <div class="signature">
+        
+        def self.<strong>new</strong>(sym, size, impl, disasm)
+
+        <a class="method-permalink" href="#new(sym,size,impl,disasm)-class-method">#</a>
+      </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/opcodes.cr#L13" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+
+
+
+  <h2>Class Method Detail</h2>
+  
+    <div class="entry-detail" id="get_opcode_and_params(vm:VM,address:Int32)-class-method">
+      <div class="signature">
+        
+        def self.<strong>get_opcode_and_params</strong>(vm : <a href="../Intcode/VM.html">VM</a>, address : Int32)
+
+        <a class="method-permalink" href="#get_opcode_and_params(vm:VM,address:Int32)-class-method">#</a>
+      </div>
+      
+        <div class="doc">
+          
+          <p>Returns a tuple with the <code><a href="../Intcode/Opcode.html">Opcode</a></code> corresponding to the instruction at the
+<em>address</em> and an array holding the <code><a href="../Intcode/Parameter.html">Parameter</a></code>s that follow it</p>
+        </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/opcodes.cr#L36" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+
+
+
+  <h2>Instance Method Detail</h2>
+  
+    <div class="entry-detail" id="debug(vm,params)-instance-method">
+      <div class="signature">
+        
+        def <strong>debug</strong>(vm, params)
+
+        <a class="method-permalink" href="#debug(vm,params)-instance-method">#</a>
+      </div>
+      
+        <div class="doc">
+          
+          <p>Return a (more or less) human-readable string describing this instruction</p>
+        </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/opcodes.cr#L30" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="disasm:Proc(VM,Array(Parameter),String)-instance-method">
+      <div class="signature">
+        
+        def <strong>disasm</strong> : Proc(<a href="../Intcode/VM.html">VM</a>, Array(<a href="../Intcode/Parameter.html">Parameter</a>), String)
+
+        <a class="method-permalink" href="#disasm:Proc(VM,Array(Parameter),String)-instance-method">#</a>
+      </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/opcodes.cr#L13" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="disasm=(disasm:Proc(VM,Array(Parameter),String))-instance-method">
+      <div class="signature">
+        
+        def <strong>disasm=</strong>(disasm : Proc(<a href="../Intcode/VM.html">VM</a>, Array(<a href="../Intcode/Parameter.html">Parameter</a>), String))
+
+        <a class="method-permalink" href="#disasm=(disasm:Proc(VM,Array(Parameter),String))-instance-method">#</a>
+      </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/opcodes.cr#L17" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="exec(vm,params)-instance-method">
+      <div class="signature">
+        
+        def <strong>exec</strong>(vm, params)
+
+        <a class="method-permalink" href="#exec(vm,params)-instance-method">#</a>
+      </div>
+      
+        <div class="doc">
+          
+          <p>Execute this opcode in the context of the given VM, with the provided
+params.  Delagates to the attached Proc.</p>
+        </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/opcodes.cr#L25" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="impl:Proc(VM,Array(Parameter),Int32)-instance-method">
+      <div class="signature">
+        
+        def <strong>impl</strong> : Proc(<a href="../Intcode/VM.html">VM</a>, Array(<a href="../Intcode/Parameter.html">Parameter</a>), Int32)
+
+        <a class="method-permalink" href="#impl:Proc(VM,Array(Parameter),Int32)-instance-method">#</a>
+      </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/opcodes.cr#L12" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="impl=(impl:Proc(VM,Array(Parameter),Int32))-instance-method">
+      <div class="signature">
+        
+        def <strong>impl=</strong>(impl : Proc(<a href="../Intcode/VM.html">VM</a>, Array(<a href="../Intcode/Parameter.html">Parameter</a>), Int32))
+
+        <a class="method-permalink" href="#impl=(impl:Proc(VM,Array(Parameter),Int32))-instance-method">#</a>
+      </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/opcodes.cr#L16" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="num_params-instance-method">
+      <div class="signature">
+        
+        def <strong>num_params</strong>
+
+        <a class="method-permalink" href="#num_params-instance-method">#</a>
+      </div>
+      
+        <div class="doc">
+          
+          <p>We use opcode size to indicate both how far the PC should move after
+execution and the number of parameters. Number of parameters is always
+<code>size-1</code> since size includes the instruction itself.</p>
+        </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/opcodes.cr#L19" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="size:Int32-instance-method">
+      <div class="signature">
+        
+        def <strong>size</strong> : Int32
+
+        <a class="method-permalink" href="#size:Int32-instance-method">#</a>
+      </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/opcodes.cr#L11" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="size=(size:Int32)-instance-method">
+      <div class="signature">
+        
+        def <strong>size=</strong>(size : Int32)
+
+        <a class="method-permalink" href="#size=(size:Int32)-instance-method">#</a>
+      </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/opcodes.cr#L15" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="sym:Symbol-instance-method">
+      <div class="signature">
+        
+        def <strong>sym</strong> : Symbol
+
+        <a class="method-permalink" href="#sym:Symbol-instance-method">#</a>
+      </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/opcodes.cr#L10" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="sym=(sym:Symbol)-instance-method">
+      <div class="signature">
+        
+        def <strong>sym=</strong>(sym : Symbol)
+
+        <a class="method-permalink" href="#sym=(sym:Symbol)-instance-method">#</a>
+      </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/opcodes.cr#L14" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+
+
+
+
+</div>
+
+</body>
+</html>

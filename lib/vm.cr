@@ -2,7 +2,7 @@ require "./intcode.cr"
 
 module Intcode
   # This class holds the current state of a running interpreter: the memory
-  # (Array(Int32)), the program counter, and a "halted/running" flag, and
+  # (`Array(Int32)`), the program counter, and a "halted/running" flag, and
   # buffers for input/output values.
   class VM
     # Name for debugging
@@ -12,14 +12,21 @@ module Intcode
     property mem : Array(Int32)
 
     # Registers
+
+    # The program counter, the address in memory to read the next instruction
     property pc : Int32
 
     # Status flags
+
+    # Indicates whether the machine has executed a HALT instruction
     property halted : Bool
+
+    # Indicates whether the machine is blocked waiting on input
     property needs_input : Bool
 
-    # I/O Buffers
+    # Input buffer
     property inputs : Array(Int32)
+    # Output buffer
     property outputs : Array(Int32)
 
     def initialize(mem)
@@ -27,13 +34,13 @@ module Intcode
       @pc = 0
       @halted = false
       @needs_input = false
-      @mem = mem #Array.new(4096, 0)
+      @mem = mem
       @inputs = [] of Int32
       @outputs = [] of Int32
     end
 
     # Get the value of the provided parameter, based on the addressing mode
-    def read_param(p : Parameter)
+    protected def read_param(p : Parameter)
       case p.mode
       when :position then mem[p.val]
       when :literal then p.val
@@ -43,7 +50,7 @@ module Intcode
     end
 
     # Set the address indicated by the parameter to the given value
-    def write_param_value(p : Parameter, val : Int32)
+    protected def write_param_value(p : Parameter, val : Int32)
       case p.mode
       when :position then mem[p.val] = val
       when :literal then raise "Cannot write to literal"
@@ -54,19 +61,12 @@ module Intcode
 
     # Run the machine until it stops for some reason
     #
-    # Returns the reason why it stopped:
-    #
-    #   :halted       Executed a HALT instruction
-    #
-    #   :needs_input  Executed an INPUT instruction, but the input buffer was
-    #                 empty, fill the input buffer with send_input and call run
-    #                 again to resume
-    #
-    #   :pc_range_err PC was moved out of the valid memory range
+    # Returns a Symbol with the machine status after execution stops for any
+    # reason, see `VM#status` for details
     def run
       log("Running...")
 
-      while !@halted && !@needs_input && @pc < mem.size
+      while status == :ok
         # fetch the next Opcode and its Parameters
         opcode, params = Opcode.get_opcode_and_params(self, pc)
         raise "INVALID OPCODE AT #{pc}: #{mem[pc]}" unless opcode
@@ -80,6 +80,20 @@ module Intcode
     end
 
     # Get the status of the VM
+    #
+    # Result can be any of the following
+    #
+    #   `:halted` => the machine executed a HALT instruction and will not run any
+    #   further
+    #
+    #   `:needs_input` => the machine attempted to execut an INPUT instruction
+    #   while the input buffer was empty. The machine can be resumed after
+    #   adding input to the buffer with `VM#send_input`
+    #
+    #   `:pc_range_err` => the program counter ran past the end of the machines
+    #   memory
+    #
+    #   `:ok` => the machine is ready to execute
     def status
       if @halted
         :halted
@@ -98,21 +112,16 @@ module Intcode
       @needs_input = false
     end
 
-    # Read a value from the amps output buffer, or 0 if the buffer is empty
+    # Read a value from the amps output buffer, or nil if the buffer is empty
     def read_output()
-      if outputs.size > 0
-        outputs.shift
-      else
-        nil
-      end
+      outputs.shift?
     end
 
     # Remove and return a value from the front of the input buffer.
     #
     # If the input buffer is empty, sets the appropriate flag and returns nil
-    def get_input
-      if inputs.size > 0
-        input = inputs.shift
+    protected def get_input
+      if input = inputs.shift?
         log "%50s" % "< #{input}"
         return input
       else
@@ -122,12 +131,13 @@ module Intcode
       end
     end
 
-    def write_output(val)
+    # Add a value to the output buffer
+    protected def write_output(val)
       outputs << val
       log "%50s" % "> #{val}"
     end
 
-    def log(msg)
+    private def log(msg)
       Intcode.log("(#{name}) #{msg}")
     end
 

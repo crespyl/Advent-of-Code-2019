@@ -32,7 +32,7 @@ def run_linked_vms(vms, links : Hash(Int32,Int32))
 
       case vm.run
       when :needs_input  # see if its linked vm has output and copy it over
-        if links.has_key?(i)
+        if links[i]?
           linked_output = vms[links[i]].read_output
           if linked_output
             vm.send_input(linked_output)

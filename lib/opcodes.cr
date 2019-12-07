@@ -15,7 +15,7 @@ module Intcode
 
     # We use opcode size to indicate both how far the PC should move after
     # execution and the number of parameters. Number of parameters is always
-    # size-1 since size includes the instruction itself.
+    # `size-1` since size includes the instruction itself.
     def num_params
       size - 1
     end
@@ -31,9 +31,17 @@ module Intcode
       disasm.call(vm, params)
     end
 
+    # Returns a tuple with the `Opcode` corresponding to the instruction at the
+    # *address* and an array holding the `Parameter`s that follow it
+    def self.get_opcode_and_params(vm : VM, address : Int32)
+      instr = vm.mem[address]
+      opcode, modes = get_opcode_and_modes(instr)
+      {opcode, modes.map_with_index { |m,i| Parameter.new(m, vm.mem[address + i + 1]) }}
+    end
+
     # Get the opcode and addressing modes for a given instruction, returns a
-    # tuple with the Opcode instance and an array of addressing mode symbols
-    def self.get_opcode_and_modes(instr : Int32)
+    # tuple with the `Opcode` instance and an array of addressing mode symbols
+    private def self.get_opcode_and_modes(instr : Int32)
       opcode = OPCODES[instr % 100]
       modes = [] of Symbol
 
@@ -46,18 +54,10 @@ module Intcode
       {opcode, modes}
     end
 
-    # Get the opcode and parameters at the given address. Same as
-    # Opcode::get_opcode_and_modes, but parses out the actual parameters from
-    # the VM memory.
-    def self.get_opcode_and_params(vm : VM, address : Int32)
-      instr = vm.mem[address]
-      opcode, modes = get_opcode_and_modes(instr)
-      {opcode, modes.map_with_index { |m,i| Parameter.new(m, vm.mem[address + i + 1]) }}
-    end
   end
 
   # Map from addressing mode digit to symbol
-  def self.lookup_addressing_mode(m)
+  protected def self.lookup_addressing_mode(m)
     case m
     when 0 then :position
     when 1 then :literal
@@ -65,27 +65,8 @@ module Intcode
     end
   end
 
-  # Represents an encoded parameter and its addressing mode
-  struct Parameter
-    property val : Int32   # The original value in memory
-    property mode : Symbol # The addressing mode
-
-    def initialize(@mode, @val) end
-
-    # Return a debug string indicating the mode and value, used for debug and
-    # disasm
-    def debug
-      case mode
-      when :position then "@#{val}"
-      when :literal then "#{val}"
-      else
-        "?#{mode}:#{val}"
-      end
-    end
-  end
-
-  # Here we define the mapping from integer to Opcode, along with the actual
-  # implementation of each as a Proc
+  # Here we define the mapping from integer to `Opcode`, along with the actual
+  # implementation of each as a `Proc`
   OPCODES = {
     1 => Opcode.new(:add, 4,
                     ->(vm: VM, params: Array(Parameter)) {

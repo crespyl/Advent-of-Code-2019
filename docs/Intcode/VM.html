@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="generator" content="Crystal Docs 0.30.1">
+
+
+<link href="../css/style.css" rel="stylesheet" type="text/css">
+
+<script type="text/javascript" src="../js/doc.js"></script>
+<script type="text/javascript">
+  CrystalDoc.base_path = "../";
+</script>
+
+  <meta id="repository-name" content="github.com/crespyl/Advent-of-Code-2019">
+  <title>Intcode::VM - github.com/crespyl/Advent-of-Code-2019</title>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-header">
+    <div class="search-box">
+      <input type="search" class="search-input" placeholder="Search..." spellcheck="false" aria-label="Search">
+    </div>
+
+    <div class="repository-links">
+      <a href="../index.html">README</a>
+    </div>
+  </div>
+
+  <div class="search-results" class="hidden">
+    <ul class="search-list"></ul>
+  </div>
+
+  <div class="types-list">
+    <ul>
+  
+  <li class="parent open current" data-id="github.com/crespyl/Advent-of-Code-2019/Intcode" data-name="intcode">
+      <a href="../Intcode.html">Intcode</a>
+      
+        <ul>
+  
+  <li class=" " data-id="github.com/crespyl/Advent-of-Code-2019/Intcode/Opcode" data-name="intcode::opcode">
+      <a href="../Intcode/Opcode.html">Opcode</a>
+      
+    </li>
+  
+  <li class=" " data-id="github.com/crespyl/Advent-of-Code-2019/Intcode/Parameter" data-name="intcode::parameter">
+      <a href="../Intcode/Parameter.html">Parameter</a>
+      
+    </li>
+  
+  <li class=" current" data-id="github.com/crespyl/Advent-of-Code-2019/Intcode/VM" data-name="intcode::vm">
+      <a href="../Intcode/VM.html">VM</a>
+      
+    </li>
+  
+</ul>
+
+      
+    </li>
+  
+</ul>
+
+  </div>
+</div>
+
+
+<div class="main-content">
+<h1 class="type-name">
+
+  <span class="kind">class</span> Intcode::VM
+
+</h1>
+
+
+  <ul class="superclass-hierarchy"><li class="superclass"><a href="../Intcode/VM.html">Intcode::VM</a></li><li class="superclass">Reference</li><li class="superclass">Object</li></ul>
+
+
+
+
+  <h2>Overview</h2>
+
+  <p>This class holds the current state of a running interpreter: the memory
+(<code>Array(Int32)</code>), the program counter, and a "halted/running" flag, and
+buffers for input/output values.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <h2>Defined in:</h2>
+  
+    
+      <a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/vm.cr#L7" target="_blank">
+        lib/vm.cr
+      </a>
+    
+    <br/>
+  
+
+
+
+
+
+  <h2>Constructors</h2>
+  <ul class="list-summary">
+    
+      <li class="entry-summary">
+        <a href="#new(mem)-class-method" class="signature"><strong>.new</strong>(mem)</a>
+        
+      </li>
+    
+  </ul>
+
+
+
+  <h2>Class Method Summary</h2>
+  <ul class="list-summary">
+    
+      <li class="entry-summary">
+        <a href="#from_file(filename)-class-method" class="signature"><strong>.from_file</strong>(filename)</a>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#from_string(str)-class-method" class="signature"><strong>.from_string</strong>(str)</a>
+        
+      </li>
+    
+  </ul>
+
+
+
+  <h2>Instance Method Summary</h2>
+  <ul class="list-summary">
+    
+      <li class="entry-summary">
+        <a href="#halted:Bool-instance-method" class="signature"><strong>#halted</strong> : Bool</a>
+        
+          <div class="summary"><p>Indicates whether the machine has executed a HALT instruction</p></div>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#halted=(halted:Bool)-instance-method" class="signature"><strong>#halted=</strong>(halted : Bool)</a>
+        
+          <div class="summary"><p>Indicates whether the machine has executed a HALT instruction</p></div>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#inputs:Array(Int32)-instance-method" class="signature"><strong>#inputs</strong> : Array(Int32)</a>
+        
+          <div class="summary"><p>Input buffer</p></div>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#inputs=(inputs:Array(Int32))-instance-method" class="signature"><strong>#inputs=</strong>(inputs : Array(Int32))</a>
+        
+          <div class="summary"><p>Input buffer</p></div>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#mem:Array(Int32)-instance-method" class="signature"><strong>#mem</strong> : Array(Int32)</a>
+        
+          <div class="summary"><p>Memory</p></div>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#mem=(mem:Array(Int32))-instance-method" class="signature"><strong>#mem=</strong>(mem : Array(Int32))</a>
+        
+          <div class="summary"><p>Memory</p></div>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#name:String-instance-method" class="signature"><strong>#name</strong> : String</a>
+        
+          <div class="summary"><p>Name for debugging</p></div>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#name=(name:String)-instance-method" class="signature"><strong>#name=</strong>(name : String)</a>
+        
+          <div class="summary"><p>Name for debugging</p></div>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#needs_input:Bool-instance-method" class="signature"><strong>#needs_input</strong> : Bool</a>
+        
+          <div class="summary"><p>Indicates whether the machine is blocked waiting on input</p></div>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#needs_input=(needs_input:Bool)-instance-method" class="signature"><strong>#needs_input=</strong>(needs_input : Bool)</a>
+        
+          <div class="summary"><p>Indicates whether the machine is blocked waiting on input</p></div>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#outputs:Array(Int32)-instance-method" class="signature"><strong>#outputs</strong> : Array(Int32)</a>
+        
+          <div class="summary"><p>Output buffer</p></div>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#outputs=(outputs:Array(Int32))-instance-method" class="signature"><strong>#outputs=</strong>(outputs : Array(Int32))</a>
+        
+          <div class="summary"><p>Output buffer</p></div>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#pc:Int32-instance-method" class="signature"><strong>#pc</strong> : Int32</a>
+        
+          <div class="summary"><p>The program counter, the address in memory to read the next instruction</p></div>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#pc=(pc:Int32)-instance-method" class="signature"><strong>#pc=</strong>(pc : Int32)</a>
+        
+          <div class="summary"><p>The program counter, the address in memory to read the next instruction</p></div>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#read_output-instance-method" class="signature"><strong>#read_output</strong></a>
+        
+          <div class="summary"><p>Read a value from the amps output buffer, or nil if the buffer is empty</p></div>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#run-instance-method" class="signature"><strong>#run</strong></a>
+        
+          <div class="summary"><p>Run the machine until it stops for some reason</p></div>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#send_input(val:Int32)-instance-method" class="signature"><strong>#send_input</strong>(val : Int32)</a>
+        
+          <div class="summary"><p>Add a value to the back of the input buffer</p></div>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#status-instance-method" class="signature"><strong>#status</strong></a>
+        
+          <div class="summary"><p>Get the status of the VM</p></div>
+        
+      </li>
+    
+  </ul>
+
+
+
+
+
+<div class="methods-inherited">
+  
+    
+
+
+    
+
+
+    
+
+
+  
+    
+
+
+    
+
+
+    
+
+
+  
+</div>
+
+
+  <h2>Constructor Detail</h2>
+  
+    <div class="entry-detail" id="new(mem)-class-method">
+      <div class="signature">
+        
+        def self.<strong>new</strong>(mem)
+
+        <a class="method-permalink" href="#new(mem)-class-method">#</a>
+      </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/vm.cr#L32" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+
+
+
+  <h2>Class Method Detail</h2>
+  
+    <div class="entry-detail" id="from_file(filename)-class-method">
+      <div class="signature">
+        
+        def self.<strong>from_file</strong>(filename)
+
+        <a class="method-permalink" href="#from_file(filename)-class-method">#</a>
+      </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/vm.cr#L144" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="from_string(str)-class-method">
+      <div class="signature">
+        
+        def self.<strong>from_string</strong>(str)
+
+        <a class="method-permalink" href="#from_string(str)-class-method">#</a>
+      </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/vm.cr#L148" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+
+
+
+  <h2>Instance Method Detail</h2>
+  
+    <div class="entry-detail" id="halted:Bool-instance-method">
+      <div class="signature">
+        
+        def <strong>halted</strong> : Bool
+
+        <a class="method-permalink" href="#halted:Bool-instance-method">#</a>
+      </div>
+      
+        <div class="doc">
+          
+          <p>Indicates whether the machine has executed a HALT instruction</p>
+        </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/vm.cr#L24" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="halted=(halted:Bool)-instance-method">
+      <div class="signature">
+        
+        def <strong>halted=</strong>(halted : Bool)
+
+        <a class="method-permalink" href="#halted=(halted:Bool)-instance-method">#</a>
+      </div>
+      
+        <div class="doc">
+          
+          <p>Indicates whether the machine has executed a HALT instruction</p>
+        </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/vm.cr#L28" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="inputs:Array(Int32)-instance-method">
+      <div class="signature">
+        
+        def <strong>inputs</strong> : Array(Int32)
+
+        <a class="method-permalink" href="#inputs:Array(Int32)-instance-method">#</a>
+      </div>
+      
+        <div class="doc">
+          
+          <p>Input buffer</p>
+        </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/vm.cr#L30" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="inputs=(inputs:Array(Int32))-instance-method">
+      <div class="signature">
+        
+        def <strong>inputs=</strong>(inputs : Array(Int32))
+
+        <a class="method-permalink" href="#inputs=(inputs:Array(Int32))-instance-method">#</a>
+      </div>
+      
+        <div class="doc">
+          
+          <p>Input buffer</p>
+        </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/vm.cr#L34" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="mem:Array(Int32)-instance-method">
+      <div class="signature">
+        
+        def <strong>mem</strong> : Array(Int32)
+
+        <a class="method-permalink" href="#mem:Array(Int32)-instance-method">#</a>
+      </div>
+      
+        <div class="doc">
+          
+          <p>Memory</p>
+        </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/vm.cr#L14" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="mem=(mem:Array(Int32))-instance-method">
+      <div class="signature">
+        
+        def <strong>mem=</strong>(mem : Array(Int32))
+
+        <a class="method-permalink" href="#mem=(mem:Array(Int32))-instance-method">#</a>
+      </div>
+      
+        <div class="doc">
+          
+          <p>Memory</p>
+        </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/vm.cr#L18" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="name:String-instance-method">
+      <div class="signature">
+        
+        def <strong>name</strong> : String
+
+        <a class="method-permalink" href="#name:String-instance-method">#</a>
+      </div>
+      
+        <div class="doc">
+          
+          <p>Name for debugging</p>
+        </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/vm.cr#L11" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="name=(name:String)-instance-method">
+      <div class="signature">
+        
+        def <strong>name=</strong>(name : String)
+
+        <a class="method-permalink" href="#name=(name:String)-instance-method">#</a>
+      </div>
+      
+        <div class="doc">
+          
+          <p>Name for debugging</p>
+        </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/vm.cr#L15" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="needs_input:Bool-instance-method">
+      <div class="signature">
+        
+        def <strong>needs_input</strong> : Bool
+
+        <a class="method-permalink" href="#needs_input:Bool-instance-method">#</a>
+      </div>
+      
+        <div class="doc">
+          
+          <p>Indicates whether the machine is blocked waiting on input</p>
+        </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/vm.cr#L27" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="needs_input=(needs_input:Bool)-instance-method">
+      <div class="signature">
+        
+        def <strong>needs_input=</strong>(needs_input : Bool)
+
+        <a class="method-permalink" href="#needs_input=(needs_input:Bool)-instance-method">#</a>
+      </div>
+      
+        <div class="doc">
+          
+          <p>Indicates whether the machine is blocked waiting on input</p>
+        </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/vm.cr#L31" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="outputs:Array(Int32)-instance-method">
+      <div class="signature">
+        
+        def <strong>outputs</strong> : Array(Int32)
+
+        <a class="method-permalink" href="#outputs:Array(Int32)-instance-method">#</a>
+      </div>
+      
+        <div class="doc">
+          
+          <p>Output buffer</p>
+        </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/vm.cr#L32" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="outputs=(outputs:Array(Int32))-instance-method">
+      <div class="signature">
+        
+        def <strong>outputs=</strong>(outputs : Array(Int32))
+
+        <a class="method-permalink" href="#outputs=(outputs:Array(Int32))-instance-method">#</a>
+      </div>
+      
+        <div class="doc">
+          
+          <p>Output buffer</p>
+        </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/vm.cr#L36" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="pc:Int32-instance-method">
+      <div class="signature">
+        
+        def <strong>pc</strong> : Int32
+
+        <a class="method-permalink" href="#pc:Int32-instance-method">#</a>
+      </div>
+      
+        <div class="doc">
+          
+          <p>The program counter, the address in memory to read the next instruction</p>
+        </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/vm.cr#L19" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="pc=(pc:Int32)-instance-method">
+      <div class="signature">
+        
+        def <strong>pc=</strong>(pc : Int32)
+
+        <a class="method-permalink" href="#pc=(pc:Int32)-instance-method">#</a>
+      </div>
+      
+        <div class="doc">
+          
+          <p>The program counter, the address in memory to read the next instruction</p>
+        </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/vm.cr#L23" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="read_output-instance-method">
+      <div class="signature">
+        
+        def <strong>read_output</strong>
+
+        <a class="method-permalink" href="#read_output-instance-method">#</a>
+      </div>
+      
+        <div class="doc">
+          
+          <p>Read a value from the amps output buffer, or nil if the buffer is empty</p>
+        </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/vm.cr#L116" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="run-instance-method">
+      <div class="signature">
+        
+        def <strong>run</strong>
+
+        <a class="method-permalink" href="#run-instance-method">#</a>
+      </div>
+      
+        <div class="doc">
+          
+          <p>Run the machine until it stops for some reason</p>
+
+<p>Returns a Symbol with the machine status after execution stops for any
+reason, see <code><a href="../Intcode/VM.html#status-instance-method">VM#status</a></code> for details</p>
+        </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/vm.cr#L66" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="send_input(val:Int32)-instance-method">
+      <div class="signature">
+        
+        def <strong>send_input</strong>(val : Int32)
+
+        <a class="method-permalink" href="#send_input(val:Int32)-instance-method">#</a>
+      </div>
+      
+        <div class="doc">
+          
+          <p>Add a value to the back of the input buffer</p>
+        </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/vm.cr#L110" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="status-instance-method">
+      <div class="signature">
+        
+        def <strong>status</strong>
+
+        <a class="method-permalink" href="#status-instance-method">#</a>
+      </div>
+      
+        <div class="doc">
+          
+          <p>Get the status of the VM</p>
+
+<p>Result can be any of the following</p>
+
+<p><code>:halted</code> => the machine executed a HALT instruction and will not run any
+  further</p>
+
+<p><code>:needs_input</code> => the machine attempted to execut an INPUT instruction
+  while the input buffer was empty. The machine can be resumed after
+  adding input to the buffer with <code><a href="../Intcode/VM.html#send_input(val:Int32)-instance-method">VM#send_input</a></code></p>
+
+<p><code>:pc_range_err</code> => the program counter ran past the end of the machines
+  memory</p>
+
+<p><code>:ok</code> => the machine is ready to execute</p>
+        </div>
+      
+      <br/>
+      <div>
+        
+          [<a href="https://github.com/crespyl/Advent-of-Code-2019/blob/6f2d31bec9f18b8485fafde01f48247fee3825d7/lib/vm.cr#L97" target="_blank">View source</a>]
+        
+      </div>
+    </div>
+  
+
+
+
+
+</div>
+
+</body>
+</html>
