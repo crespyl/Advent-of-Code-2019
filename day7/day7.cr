@@ -3,8 +3,6 @@ require "../lib/intcode.cr"
 
 Intcode.set_debug(ENV.has_key?("AOC_DEBUG") ? ENV["AOC_DEBUG"] == "true" : false)
 
-puts "Part 1"
-
 # Create 5 amplifier progras
 def make_amps(phase_settings, custom_prg = "")
   phase_settings.map { |phase_setting|
@@ -18,94 +16,78 @@ def make_amps(phase_settings, custom_prg = "")
   }
 end
 
-# Run each vm and feed its first output to the next machines input
-def run_serial(amps)
-  #puts "Running amps serial: #{amps.size}"
-  amps.size.times do |i|
-    # puts "Running Amp #{i}"
-    amps[i].run
-    # puts "  done: #{amps[i].outputs}"
-    output = amps[i].outputs.first
-    # puts "  got #{output}"
-    if amps.size > i+1
-      amps[i+1].send_input(output)
-    end
-  end
-end
+# Run each vm and connects their outputs and inputs as indicated by the link
+# pairs
+#
+# Each pair (x,y) indicates that vm X should read its input from the output of
+# vm Y
+#
+# Returns the last output of the final vm
+def run_linked_vms(vms, links : Hash(Int32,Int32))
+  # vms can be halted, input blocked, or ready; we keep working until all have
+  # halted
+  while vms.any? { |amp| amp.status != :halted }
+    vms.each_with_index() do |amp, i|
 
-def run_feedback(amps)
-  #puts "Running amps feedback: #{amps.size}"
-
-  while amps.all? { |amp| amp.status != :halted }
-    amps.each_with_index do |amp, i|
       case amp.status
-      when :needs_input
-        previous = amps[(i-1) % amps.size].read_output
-        # if we don't get anything from the previous amp, just skip this for now
-        if previous
-          amp.send_input(previous)
-          amp.run
+      when :ok           # nothing to do
+        amp.run
+      when :needs_input  # see if its linked vm has output and copy it over
+        if links[i]
+          linked_output = vms[links[i]].read_output
+          if linked_output
+            amp.send_input(linked_output)
+            amp.run
+          end
         end
-      when :ok
-          amp.run
+      when :halted      # nothing to do
       end
+
     end
   end
 
-  #puts "Feedback run complete: #{amps.map { |a| a.status }} \n#{amps.last.outputs}"
+  return vms.last.read_output
 end
 
 # Test each permutation of an input set and find the best
-def find_best(inputs)
+def find_best(inputs, runner)
   best_settings, best_output = inputs, 0
   inputs.each_permutation do |p|
     amps = make_amps(p)
     amps[0].send_input(0)
-    run_serial(amps)
-    output = amps.last.read_output
+    output = runner.call(amps)
+    #output = amps.last.read_output
     if output && output > best_output
       best_output = output
       best_settings = p
     end
   end
   return best_settings, best_output
+end
+
+def find_best_serial(inputs)
+  links = {1 => 0,
+           2 => 1,
+           3 => 2,
+           4 => 3}
+  find_best(inputs, ->(amps: Array(Intcode::VM)) { run_linked_vms(amps, links) })
 end
 
 def find_best_feedback(inputs)
-  best_settings, best_output = inputs, 0
-  inputs.each_permutation do |p|
-    puts "  trying #{p}"
-    amps = make_amps(p)
-    amps[0].send_input(0)
-    run_feedback(amps)
-    output = amps.last.read_output
-    puts "    got #{output}"
-    if output && output > best_output
-      best_output = output
-      best_settings = p
-    end
-  end
-  return best_settings, best_output
+  links = {0 => 4,
+           1 => 0,
+           2 => 1,
+           3 => 2,
+           4 => 3}
+  find_best(inputs, ->(amps: Array(Intcode::VM)) { run_linked_vms(amps, links) })
 end
 
 inputs = [0,1,2,3,4]
-best_settings, best_output = find_best(inputs)
+best_settings, best_output = find_best_serial(inputs)
 
 puts "Part 1"
 puts "Best Settings: #{best_settings}"
 puts "Best Output: #{best_output}"
-
-# inputs = [9,8,7,6,5]
-# amps = make_amps(inputs, "3,26,1001,26,-4,26,3,27,1002,27,2,27,1,27,26,27,4,27,1001,28,-1,28,1005,28,6,99,0,0,5")
-
-# inputs = [9,7,8,5,6]
-# amps = make_amps(inputs, "3,52,1001,52,-5,52,3,53,1,52,56,54,1007,54,5,55,1005,55,26,1001,54,
-# -5,54,1105,1,12,1,53,54,53,1008,54,0,55,1001,55,1,55,2,53,55,53,4,
-# 53,1001,56,-1,56,1005,56,6,99,0,0,0,0,10")
-
-# amps[0].send_input(0)
-# run_feedback(amps)
-# puts amps.last.read_output
 
 puts "\n Part 2"
 inputs = [5,6,7,8,9]
