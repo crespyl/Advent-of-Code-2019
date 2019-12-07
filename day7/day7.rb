@@ -27,15 +27,15 @@ end
 def run_linked_vms(vms, links)
   # vms can be halted, input blocked, or ready; we keep working until all have
   # halted
-  while vms.any? { |amp| amp.status != :halted }
-    vms.each_with_index() do |amp, i|
+  while vms.any? { |vm| vm.status != :halted }
+    vms.each_with_index() do |vm, i|
 
-      case amp.run
+      case vm.run
       when :needs_input  # see if its linked vm has output and copy it over
         if links.has_key?(i)
           linked_output = vms[links[i]].read_output
           if linked_output
-            amp.send_input(linked_output)
+            vm.send_input(linked_output)
           end
         end
       when :halted      # nothing to do
