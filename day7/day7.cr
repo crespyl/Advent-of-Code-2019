@@ -39,17 +39,18 @@ def run_linked_vms(vms, links : Hash(Int32,Int32))
   while vms.any? { |vm| vm.status != :halted }
     vms.each_with_index() do |vm, i|
 
-      case vm.run
+      case vm.status
+      when :ok then vm.run
       when :needs_input  # see if its linked vm has output and copy it over
         if links[i]?
           linked_output = vms[links[i]].read_output
           if linked_output
             vm.send_input(linked_output)
+            vm.run
           end
         end
-      when :halted      # nothing to do
+      when :halted # nothing to do
       end
-
     end
   end
 
