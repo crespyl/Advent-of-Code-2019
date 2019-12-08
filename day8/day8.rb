@@ -1,4 +1,4 @@
-#!/usr/bin/env crystal
+#!/usr/bin/env ruby
 require "colorize"
 
 #Intcode.set_debug(ENV.has_key?("AOC_DEBUG") ? ENV["AOC_DEBUG"] == "true" : false)
@@ -19,12 +19,11 @@ COLORS = {
 }
 
 def split_layers(data, width, height)
-  layers = [] of Array(Int32)
+  layers = []
 
-  data.chars.in_groups_of(width * height, '-') do |layer|
+  data.chars.each_slice(width * height) do |layer|
     layers << layer
              .reject {|c| c == nil}
-             .reject { |c| ! c.number? }
              .map { |c| c.to_i }
   end
 
@@ -36,10 +35,10 @@ def count_elem(data, target)
 end
 
 def layer_counts(layers)
-  counts = {} of Int32 => Hash(Int32, Int32)
+  counts = {}
 
   layers.each_with_index do |layer, i|
-    counts[i] = Hash(Int32, Int32).new
+    counts[i] = {}
     counts[i][0] = count_elem(layer, 0)
     counts[i][1] = count_elem(layer, 1)
     counts[i][2] = count_elem(layer, 2)
@@ -48,8 +47,8 @@ def layer_counts(layers)
   counts
 end
 
-def find_least_zeros(layer_counts : Hash(Int32, Hash(Int32, Int32)))
-  least_zs = Int32::MAX
+def find_least_zeros(layer_counts)
+  least_zs = 99999999
   least_i = 0
 
   layer_counts.each do |i, counts|
@@ -78,7 +77,7 @@ puts counts[least_zs_i][1] * counts[least_zs_i][2]
 
 # Part 2
 def flatten(layers)
-  output = Array(Int32).new(WIDTH*HEIGHT, 2)
+  output = []
   layers.reverse.each do |layer|
     layer.each_with_index do |value, i|
       case value
@@ -95,10 +94,10 @@ flattened = flatten(layers)
 
 flattened.each_with_index do |val, i|
   if i % WIDTH == 0
-    print '\n'
+    print "\n"
   end
 
   color = COLORS[val]
 
-  print " ".colorize.back(color)
+  print " ".colorize(:background => color)
 end
