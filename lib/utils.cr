@@ -15,4 +15,15 @@ module Utils
   def self.get_input_file(filename)
     File.read(filename).strip
   end
+
+  # write an array of pixel RGB triples to a PPM file
+  def self.write_ppm(width, height, pixels : Array(Tuple(Int32, Int32, Int32)), filename)
+    File.open(filename, "w") do |file|
+      file.print("P3\n%i %i\n255\n" % [width, height])
+      pixels.each do |r,g,b|
+        file.print("%i %i %i\n" % [r,g,b])
+      end
+    end
+  end
+
 end

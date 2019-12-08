@@ -2,12 +2,7 @@
 require "colorize"
 require "../lib/utils.cr"
 
-COLORS = {
-  0 => :black,
-  1 => :white,
-  2 => :transparent
-}
-
+COLORS = {0 => :black, 1 => :white, 2 => :transparent}
 WIDTH = 25
 HEIGHT = 6
 
@@ -32,8 +27,19 @@ def flatten(layers)
 end
 
 print "Part 2:"
-flatten(layers).map { |v| COLORS[v] }.each_with_index do |color, i|
+flatten(layers)
+  .map { |v| COLORS[v] }
+  .each_with_index do |color, i|
   i % WIDTH == 0 && print '\n'
   print " ".colorize.back(color)
 end
 print '\n'
+
+filename = Utils.cli_param_or_default(1, "day8/output.ppm")
+Utils.write_ppm(WIDTH, HEIGHT, flatten(layers).map { |v|
+                  case v
+                  when 0 then {255, 255, 255}
+                  when 1 then {0, 0, 0}
+                  else {255, 0, 0}
+                  end
+                }, filename)
