@@ -1,14 +1,16 @@
 #!/usr/bin/env crystal
 require "colorize"
 require "../lib/intcode.cr"
+require "../lib/utils.cr"
 
-Intcode.set_debug(ENV.has_key?("AOC_DEBUG") ? ENV["AOC_DEBUG"] == "true" : false)
+Intcode.set_debug(Utils.enable_debug_output?)
+INPUT = Utils.get_input_file(Utils.cli_param_or_default(0, "day7/input.txt"))
 
 # Create 5 amplifier progras
 def make_amps(phase_settings, custom_prg = "")
   phase_settings.map_with_index { |phase_setting, i|
     if custom_prg.empty?
-      vm = Intcode::VM.from_file("day7/input.txt")
+      vm = Intcode::VM.from_string(INPUT)
     else
       vm = Intcode::VM.from_string(custom_prg)
     end
@@ -43,6 +45,7 @@ def run_linked_vms(vms, links : Hash(Int32,Int32))
       when :ok then vm.run
       when :needs_input  # see if its linked vm has output and copy it over
         if links[i]?
+          puts "   #{vm.name} <- #{vms[links[i]].name}" if Utils.enable_debug_output?
           linked_output = vms[links[i]].read_output
           if linked_output
             vm.send_input(linked_output)
@@ -78,6 +81,7 @@ def run_async_vms(vms, links)
           vm.run
         when :needs_input
           if links[i]?
+            puts "   #{vm.name} <- #{vms[links[i]].name}"
             vm.send_input(channels[links[i]].receive)
             vm.run
           else # needs input but there's no linked vm to read it from
@@ -93,7 +97,6 @@ def run_async_vms(vms, links)
         end
       end
 
-      channels[i].close
       halts.send(true)
     }
   end
@@ -127,7 +130,7 @@ def find_best_serial(inputs)
            2 => 1,
            3 => 2,
            4 => 3}
-  find_best(inputs, ->(amps: Array(Intcode::VM)) { run_async_vms(amps, links) })
+  find_best(inputs, ->(amps: Array(Intcode::VM)) { run_linked_vms(amps, links) })
 end
 
 def find_best_feedback(inputs)
@@ -136,7 +139,7 @@ def find_best_feedback(inputs)
            2 => 1,
            3 => 2,
            4 => 3}
-  find_best(inputs, ->(amps: Array(Intcode::VM)) { run_async_vms(amps, links) })
+  find_best(inputs, ->(amps: Array(Intcode::VM)) { run_linked_vms(amps, links) })
 end
 
 puts "Part 1"

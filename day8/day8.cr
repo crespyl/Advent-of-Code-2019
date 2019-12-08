@@ -1,17 +1,6 @@
 #!/usr/bin/env crystal
 require "colorize"
-
-INPUT = ARGV.size > 0 ? ARGV[0] : "day8/input.txt"
-data = File.read(INPUT).strip
-
-WIDTH = 25
-HEIGHT = 6
-
-COLORS = {
-  0 => :black,
-  1 => :white,
-  2 => :transparent
-}
+require "../lib/utils.cr"
 
 def split_layers(data, width, height)
   data
@@ -36,14 +25,6 @@ def find_layer_with_least(layer_counts, val=0)
   }
 end
 
-# Part 1
-layers = split_layers(data, WIDTH, HEIGHT)
-counts = layer_counts(layers)
-
-least_zs = find_layer_with_least(counts, 0)
-puts "Part 1: %i" % (least_zs[1] * least_zs[2])
-
-# Part 2
 def flatten(layers)
   layers.reverse.reduce(Array(Int32).new(WIDTH*HEIGHT,2)) do |output, layer|
     layer.each_with_index do |v, i|
@@ -53,15 +34,26 @@ def flatten(layers)
   end
 end
 
+COLORS = {
+  0 => :black,
+  1 => :white,
+  2 => :transparent
+}
+
+WIDTH = 25
+HEIGHT = 6
+
+input = Utils.get_input_file(Utils.cli_param_or_default(0, "day8/input.txt"))
+layers = split_layers(input, WIDTH, HEIGHT)
+
+# Part 1
+layer_counts = find_layer_with_least(layer_counts(layers))
+puts "Part 1: %i" % (layer_counts[1] * layer_counts[2])
+
+# Part 2
 print "Part 2:"
-flattened = flatten(layers)
-flattened.each_with_index do |val, i|
-  if i % WIDTH == 0
-    print '\n'
-  end
-
-  color = COLORS[val]
-
+flatten(layers).map { |v| COLORS[v] }.each_with_index do |color, i|
+  i % WIDTH == 0 && print '\n'
   print " ".colorize.back(color)
 end
 print '\n'
