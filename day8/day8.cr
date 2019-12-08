@@ -6,11 +6,7 @@ def split_layers(data, width, height)
   data
     .chars
     .in_groups_of(width * height, '-')
-    .reduce([] of Array(Int32)) do |layers, layer|
-    layers << layer
-             .reject { |c| ! c.number? }
-             .map { |c| c.to_i }
-  end
+    .reduce([] of Array(Int32)) { |layers, layer| layers << layer.select(&.number?).map(&.to_i) }
 end
 
 def layer_counts(layers)
