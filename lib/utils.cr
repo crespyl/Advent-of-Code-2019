@@ -21,9 +21,8 @@ module Utils
     File.open(filename, "w") do |file|
       file.print("P3\n%i %i\n255\n" % [width, height])
       pixels.each do |r,g,b|
-        file.print("%i %i %i\n" % [r,g,b])
+        file.print("%i %i %i\n" % [r,g,b].map{ |v| v % 255 }) # wrap output to 255
       end
     end
   end
-
 end

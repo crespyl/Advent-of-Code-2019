@@ -38,8 +38,8 @@ print '\n'
 filename = Utils.cli_param_or_default(1, "day8/output.ppm")
 Utils.write_ppm(WIDTH, HEIGHT, flatten(layers).map { |v|
                   case v
-                  when 0 then {255, 255, 255}
-                  when 1 then {0, 0, 0}
+                  when 0 then {0, 0, 0}
+                  when 1 then {255, 255, 255}
                   else {255, 0, 0}
                   end
                 }, filename)
