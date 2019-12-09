@@ -38,16 +38,30 @@ module Intcode
       @rel_base = 0
       @halted = false
       @needs_input = false
-      @mem = Array(Int64).new(4096) { |i| mem.size > i ? mem[i] : 0_i64 }
+      @mem = mem
       @inputs = [] of Int64
       @outputs = [] of Int64
+    end
+
+    def read_or_grow_mem(address)
+      if mem.size <= address
+        (address-mem.size+1).times { |_| mem << 0 }
+      end
+      mem[address]
+    end
+
+    def write_or_grow_mem(address, val)
+      if mem.size <= address
+        (address-mem.size+1).times { |_| mem << 0 }
+      end
+      mem[address] = val
     end
 
     # Get the value of the provided parameter, based on the addressing mode
     protected def read_param(p : Parameter)
       case p.mode
-      when :position then mem[p.val]
-      when :relative then mem[@rel_base + p.val]
+      when :position then read_or_grow_mem(p.val)
+      when :relative then read_or_grow_mem(@rel_base + p.val)
       when :literal then p.val
       else
         raise "Unsupported addressing mode for #{p}"
@@ -57,8 +71,8 @@ module Intcode
     # Set the address indicated by the parameter to the given value
     protected def write_param_value(p : Parameter, val : Int64)
       case p.mode
-      when :position then mem[p.val] = val
-      when :relative then mem[@rel_base + p.val] = val
+      when :position then write_or_grow_mem(p.val, val)
+      when :relative then write_or_grow_mem(@rel_base + p.val, val)
       when :literal then raise "Cannot write to literal"
       else
         raise "Unsupported addressing mode for #{p}"

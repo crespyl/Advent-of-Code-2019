@@ -167,7 +167,7 @@ module Intcode
                       vm.pc += 2
                     },
                     ->(vm: VM, params: Array(Parameter)) {
-                      "REL  %5s" % params.map { |p| p.debug }
+                      "REL %5s" % params.map { |p| p.debug }
                     }),
     99 => Opcode.new(:halt, 1,
                      ->(vm: VM, params : Array(Parameter)) {

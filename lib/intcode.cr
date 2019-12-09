@@ -40,6 +40,7 @@ module Intcode
     def debug
       case mode
       when :position then "@#{val}"
+      when :relative then "$#{val}"
       when :literal then "#{val}"
       else
         "?#{mode}:#{val}"
