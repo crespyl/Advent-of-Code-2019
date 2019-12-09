@@ -1,6 +1,4 @@
 #!/usr/bin/env crystal
-
-require "colorize"
 require "../lib/intcode.cr"
 require "../lib/utils.cr"
 
