@@ -34,7 +34,7 @@ def check_increase(n)
 end
 
 def check_adjacency_p2(n)
-  n.to_s.chars.group_by { |c| c }.any? { |k,v| v.size == 2 }
+  n.to_s.chars.group_by { |c| c }.any? { |k, v| v.size == 2 }
 end
 
 def check(n)

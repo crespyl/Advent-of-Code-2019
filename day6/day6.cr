@@ -40,7 +40,7 @@ class Node
 end
 
 def find_or_make_node(map, name)
-  if ! map.has_key? name
+  if !map.has_key? name
     map[name] = Node.new(name, nil)
   end
   map[name]
@@ -63,7 +63,7 @@ nodes["COM"] = Node.new("COM", nil)
 
 input = ARGV.size > 0 ? ARGV[0] : "day6/input.txt"
 File.read_lines(input).each do |line|
-  n1, n2 = line.split(")").map{ |n| n.strip }
+  n1, n2 = line.split(")").map { |n| n.strip }
   node1 = find_or_make_node(nodes, n1)
   node2 = find_or_make_node(nodes, n2)
   node2.parent = node1
@@ -77,5 +77,5 @@ puts nodes.values.reduce(0) { |sum, node| sum + node.get_depth }
 puts "Part 2"
 common = find_common_parent(nodes, nodes["YOU"], nodes["SAN"])
 path_dist = (nodes["YOU"].get_depth - common.get_depth) + (nodes["SAN"].get_depth - common.get_depth)
-puts path_dist-2 # subtract two since we're counting *transfers*, we don't
-                 # "transfer" from our start/end nodes
+puts path_dist - 2 # subtract two since we're counting *transfers*, we don't
+# "transfer" from our start/end nodes

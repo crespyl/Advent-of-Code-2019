@@ -4,7 +4,7 @@ alias Point = Tuple(Int32, Int32)
 
 # utility fn to make swapping point representation easier
 def point(x : Int32, y : Int32)
-  {x,y}
+  {x, y}
 end
 
 # manhattan distance between two points
@@ -12,7 +12,7 @@ def dist(a : Point, b : Point)
   ax, ay = a
   bx, by = b
 
-  (ax-bx).abs + (ay-by).abs
+  (ax - bx).abs + (ay - by).abs
 end
 
 class Wire
@@ -20,11 +20,12 @@ class Wire
   @point_dists = {} of Tuple(Point) => Int32
   property :points
   property :point_dists # this is inefficient in the extreme: we keep a map of
-                        # how long the wire is at each point for lookup in Part
-                        # 2. It'd be more efficient to only fully plot one wire
-                        # and then iterate over each of the other wires point by
-                        # point and only save off the intersections as we come
-                        # to them.
+  # how long the wire is at each point for lookup in Part
+  # 2. It'd be more efficient to only fully plot one wire
+  # and then iterate over each of the other wires point by
+  # point and only save off the intersections as we come
+  # to them.
+
   def initialize(points : Array(Point), point_dists : Hash(Point, Int32))
     @points = points
     @point_dists = point_dists
@@ -44,7 +45,7 @@ def read_wire_points(str)
 
   str
     .split(',')
-    .map { |s| m=s.match(/([LRUD])(\d+)/); !m.nil? ? {m[1], m[2].to_i} : raise "invalid input" }
+    .map { |s| m = s.match(/([LRUD])(\d+)/); !m.nil? ? {m[1], m[2].to_i} : raise "invalid input" }
     .each do |dir, dist|
       while dist > 0
         case dir
@@ -55,7 +56,7 @@ def read_wire_points(str)
         end
         dist -= 1
         len += 1
-        p = point(x,y)
+        p = point(x, y)
         points << p
         point_dists[p] = len
       end
@@ -72,7 +73,7 @@ end
 # Given a list of intersection points, find the one closest to 0,0
 def closest_to_center(list)
   list
-    .sort_by { |point| dist(point, point(0,0)) }
+    .sort_by { |point| dist(point, point(0, 0)) }
     .first
 end
 
@@ -83,20 +84,20 @@ end
 
 input = ARGV[0]
 wires = File.read_lines(input)
-        .reject { |line| line.empty? }
-        .map { |line| read_wire_points(line) }
+  .reject { |line| line.empty? }
+  .map { |line| read_wire_points(line) }
 
 i_pts = intersections(wires[0].points, wires[1].points)
 result = closest_to_center(i_pts)
 
 puts "Part 1"
-puts dist(result, point(0,0))
+puts dist(result, point(0, 0))
 
 # Part 2 requires us to sort the intersections by the shortest combined lengths
 result = i_pts
-         .map { |point| wires[0].point_dists[point] + wires[1].point_dists[point] }
-         .sort
-         .first
+  .map { |point| wires[0].point_dists[point] + wires[1].point_dists[point] }
+  .sort
+  .first
 
 puts "Part 2"
 puts result

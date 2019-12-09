@@ -20,10 +20,10 @@ end
 # Map from an integer to an opcode symbol
 def get_opcode(int)
   case int
-  when 1 then :add
-  when 2 then :mul
+  when  1 then :add
+  when  2 then :mul
   when 99 then :halt
-  else :invalid
+  else         :invalid
   end
 end
 
@@ -36,17 +36,17 @@ def exec_intcode(mem)
     case current_opcode
     when :add
       # puts("got :add at #{pc}")
-      x = mem[pc+1]
-      y = mem[pc+2]
-      dest = mem[pc+3]
+      x = mem[pc + 1]
+      y = mem[pc + 2]
+      dest = mem[pc + 3]
       # puts("    add #{x} #{y}, #{dest}")
       mem[dest] = mem[x] + mem[y]
       pc += 4
     when :mul
       # puts("got :mul at #{pc}")
-      x = mem[pc+1]
-      y = mem[pc+2]
-      dest = mem[pc+3]
+      x = mem[pc + 1]
+      y = mem[pc + 2]
+      dest = mem[pc + 3]
       # puts("    mul #{x} #{y}, #{dest}")
       mem[dest] = mem[x] * mem[y]
       pc += 4
@@ -62,7 +62,7 @@ end
 
 # The puzzle requires us to set a few addresses to a particular value before
 # execution
-def init_puzzle(mem, noun=12_i64, verb=2_i64)
+def init_puzzle(mem, noun = 12_i64, verb = 2_i64)
   mem[1] = Int64.new(noun)
   mem[2] = Int64.new(verb)
 end
@@ -77,7 +77,7 @@ end
 # the output 19690720
 #
 # The puzzle asks the question "what is 100 * noun + verb"
-def search(filename="input.txt")
+def search(filename = "input.txt")
   mem = [0]
   results = {noun: 0, verb: 0, output: 0}
 
@@ -111,7 +111,7 @@ puts "Output: #{vm.mem[0]}"
 puts "\n"
 
 puts "Part 1"
-#vm = Intcode::VM.from_file(ARGV[0])
+# vm = Intcode::VM.from_file(ARGV[0])
 vm = VM2.from_file(ARGV[0])
 init_puzzle(vm.mem)
 vm.run
@@ -124,8 +124,8 @@ def search_vm(makevm)
 
   (0..99).each do |noun|
     (0..99).each do |verb|
-      #vm = Intcode::VM.from_file(filename)
-      #vm = VM2.from_file(filename)
+      # vm = Intcode::VM.from_file(filename)
+      # vm = VM2.from_file(filename)
       vm = makevm.call
       init_puzzle(vm.mem, noun, verb)
       vm.run
@@ -142,7 +142,7 @@ end
 puts "Part 2"
 puts "searching..."
 t_start = Time.local
-results = search_vm(->(){ Intcode::VM.from_file(ARGV[0]) })
+results = search_vm(->{ Intcode::VM.from_file(ARGV[0]) })
 puts "search completed in %s" % (Time.local - t_start).to_s
 puts "  output: #{results[:output]}"
 puts "    noun: #{results[:noun]}"
@@ -152,7 +152,7 @@ puts "solution: #{100 * results[:noun] + results[:verb]}"
 puts "Part 2"
 puts "searching..."
 t_start = Time.local
-results = search_vm(->(){ VM2.from_file(ARGV[0]) })
+results = search_vm(->{ VM2.from_file(ARGV[0]) })
 puts "search completed in %s" % (Time.local - t_start).to_s
 puts "  output: #{results[:output]}"
 puts "    noun: #{results[:noun]}"

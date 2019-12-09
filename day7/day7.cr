@@ -24,10 +24,10 @@ end
 
 # Utility fn to make colorized amp names for debugging
 def colorize_name(name)
-  r =  [rand(UInt8), UInt8.new(100)].max
-  g =  [rand(UInt8), UInt8.new(100)].max
-  b =  [rand(UInt8), UInt8.new(100)].max
-  name.colorize(Colorize::ColorRGB.new(r,g,b)).to_s
+  r = [rand(UInt8), UInt8.new(100)].max
+  g = [rand(UInt8), UInt8.new(100)].max
+  b = [rand(UInt8), UInt8.new(100)].max
+  name.colorize(Colorize::ColorRGB.new(r, g, b)).to_s
 end
 
 # Run each vm and connects their outputs and inputs as indicated by the link
@@ -37,15 +37,14 @@ end
 # vm Y
 #
 # Returns the last output of the final vm
-def run_linked_vms(vms, links : Hash(Int32,Int32))
+def run_linked_vms(vms, links : Hash(Int32, Int32))
   # vms can be halted, input blocked, or ready; we keep working until all have
   # halted
   while vms.any? { |vm| vm.status != :halted }
     vms.each_with_index() do |vm, i|
-
       case vm.status
       when :ok then vm.run
-      when :needs_input  # see if its linked vm has output and copy it over
+      when :needs_input # see if its linked vm has output and copy it over
         if links[i]?
           puts "   #{vm.name} <- #{vms[links[i]].name}" if Utils.enable_debug_output?
           while linked_output = vms[links[i]].read_output
@@ -55,7 +54,6 @@ def run_linked_vms(vms, links : Hash(Int32,Int32))
         end
       when :halted # nothing to do
       end
-
     end
   end
 
@@ -72,10 +70,10 @@ end
 def run_async_vms(vms, links)
   halts = Channel(Bool).new
   channels = vms.map { |vm| Channel(Int64).new(1) } # channels have a buffer so
-                                                    # that the final send
-                                                    # doesn't block waiting for
-                                                    # a halted machine to read
-  vms.each_with_index do |vm,i|
+  # that the final send
+  # doesn't block waiting for
+  # a halted machine to read
+  vms.each_with_index do |vm, i|
     spawn {
       while true
         case vm.status
@@ -118,7 +116,7 @@ def find_best(inputs : Array(Int64), runner)
     amps = make_amps(p)
     amps[0].send_input(0)
     output = runner.call(amps)
-    #output = amps.last.read_output
+    # output = amps.last.read_output
     if output && output > best_output
       best_output = output
       best_settings = p
@@ -132,7 +130,7 @@ def find_best_serial(inputs)
            2 => 1,
            3 => 2,
            4 => 3}
-  find_best(inputs, ->(amps: Array(VM2::VM)) { run_async_vms(amps, links) })
+  find_best(inputs, ->(amps : Array(VM2::VM)) { run_async_vms(amps, links) })
 end
 
 def find_best_feedback(inputs)
@@ -141,7 +139,7 @@ def find_best_feedback(inputs)
            2 => 1,
            3 => 2,
            4 => 3}
-  find_best(inputs, ->(amps: Array(VM2::VM)) { run_async_vms(amps, links) })
+  find_best(inputs, ->(amps : Array(VM2::VM)) { run_async_vms(amps, links) })
 end
 
 puts "Part 1"

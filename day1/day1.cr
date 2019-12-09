@@ -15,8 +15,8 @@ puts "Part 1"
 puts File.read(input)
   .chomp
   .split('\n')
-  .map{ |l| l.to_i }
-  .reduce(0) { |s,m| s + m // 3 - 2 }
+  .map { |l| l.to_i }
+  .reduce(0) { |s, m| s + m // 3 - 2 }
 
 # Part 2 requires us to do this fuel calculation recursively
 def fuel_for_mass_recursive(mass)
