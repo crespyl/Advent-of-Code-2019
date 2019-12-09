@@ -18,8 +18,6 @@ module VM2
       @debug = false
       @pc = 0
       @rel_base = 0
-      @opcode = 0
-      @modes = []
       @status = :ok
       @mem = mem
       @input = []
@@ -32,7 +30,7 @@ module VM2
     end
 
     def read_output
-      @output.shift?
+      @output.shift
     end
 
     def read_input

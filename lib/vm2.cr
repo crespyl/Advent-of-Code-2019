@@ -18,8 +18,6 @@ module VM2
       @debug = false
       @pc = 0
       @rel_base = 0
-      @opcode = 0
-      @modes = [] of Symbol
       @status = :ok
       @mem = mem
       @input = [] of Int64
@@ -45,13 +43,13 @@ module VM2
     end
 
     def read_mem(address)
-      (address-mem.size+1).times { |_| mem << 0 } if mem.size <= address
-      mem[address]
+      @mem += [0_i64] * (address-@mem.size+1) if @mem.size <= address
+      @mem[address]
     end
 
     def write_mem(address, val)
-      (address-mem.size+1).times { |_| mem << 0 } if mem.size <= address
-      mem[address] = val
+      @mem += [0_i64] * (address-@mem.size+1) if @mem.size <= address
+      @mem[address] = val
     end
 
     def read_p(p)
