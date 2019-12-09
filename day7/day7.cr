@@ -48,14 +48,14 @@ def run_linked_vms(vms, links : Hash(Int32,Int32))
       when :needs_input  # see if its linked vm has output and copy it over
         if links[i]?
           puts "   #{vm.name} <- #{vms[links[i]].name}" if Utils.enable_debug_output?
-          linked_output = vms[links[i]].read_output
-          if linked_output
+          while linked_output = vms[links[i]].read_output
             vm.send_input(linked_output)
             vm.run
           end
         end
       when :halted # nothing to do
       end
+
     end
   end
 

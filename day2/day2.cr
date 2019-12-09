@@ -142,7 +142,7 @@ end
 puts "Part 2"
 puts "searching..."
 t_start = Time.local
-results = search_vm(->(){ VM2.from_file(ARGV[0]) })
+results = search_vm(->(){ Intcode::VM.from_file(ARGV[0]) })
 puts "search completed in %s" % (Time.local - t_start).to_s
 puts "  output: #{results[:output]}"
 puts "    noun: #{results[:noun]}"
@@ -152,7 +152,7 @@ puts "solution: #{100 * results[:noun] + results[:verb]}"
 puts "Part 2"
 puts "searching..."
 t_start = Time.local
-results = search_vm(->(){ Intcode::VM.from_file(ARGV[0]) })
+results = search_vm(->(){ VM2.from_file(ARGV[0]) })
 puts "search completed in %s" % (Time.local - t_start).to_s
 puts "  output: #{results[:output]}"
 puts "    noun: #{results[:noun]}"

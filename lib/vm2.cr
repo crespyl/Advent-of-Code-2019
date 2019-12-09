@@ -13,9 +13,6 @@ module VM2
     property input : Array(Int64)
     property output : Array(Int64)
 
-    property opcode : Int64
-    property modes : Array(Symbol)
-
     def initialize(mem : Array(Int64))
       @name = "VM"
       @debug = false
@@ -60,13 +57,13 @@ module VM2
     def read_p(p)
       case p[0]
       when :position then read_mem(p[1])
-      when :literal then p[1]
       when :relative then read_mem(rel_base + p[1])
+      when :literal then p[1]
       else raise "Unsupported addressing mode for read #{p}"
       end
     end
 
-    def write_p(p, val)
+    def write_p(p, val : Int64)
       case p[0]
       when :position then write_mem(p[1], val)
       when :relative then write_mem(rel_base + p[1], val)
@@ -94,7 +91,7 @@ module VM2
     end
 
     def exec
-      opcode, params = decode()
+      opcode, params = decode
       log "%5i : %05i : %s" % [pc, mem[pc], VM2.disasm(opcode, params)]
 
       case opcode
@@ -128,16 +125,16 @@ module VM2
         end
       when 7 # lt
         if read_p(params[0]) < read_p(params[1])
-          write_p(params[2], 1_i64)
+          write_p(params[2], 1)
         else
-          write_p(params[2], 0_i64)
+          write_p(params[2], 0)
         end
         @pc += 4
       when 8 # eq
         if read_p(params[0]) == read_p(params[1])
-          write_p(params[2], 1_i64)
+          write_p(params[2], 1)
         else
-          write_p(params[2], 0_i64)
+          write_p(params[2], 0)
         end
         @pc += 4
       when 9 # rel
@@ -179,7 +176,7 @@ module VM2
                  when 99 then {"HALT",  0}
                  else {"???", 3}
                  end
-    "%3s: %s" % [name, params[..args].map { |p| case p[0]
+    "%3s: %s" % [name, params.first(args).map { |p| case p[0]
                                                 when :literal then p[1]
                                                 when :position then "@%i" % p[1]
                                                 when :relative then "$%i" % p[1]

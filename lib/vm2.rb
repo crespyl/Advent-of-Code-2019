@@ -13,9 +13,6 @@ module VM2
     attr_accessor :input
     attr_accessor :output
 
-    attr_accessor :opcode
-    attr_accessor :modes
-
     def initialize(mem)
       @name = "VM"
       @debug = false
