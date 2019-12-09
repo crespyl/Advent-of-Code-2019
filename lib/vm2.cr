@@ -96,7 +96,6 @@ module VM2
     def exec
       opcode, params = decode()
       log "%5i : %05i : %s" % [pc, mem[pc], VM2.disasm(opcode, params)]
-      #log "%i : %05i : %i : %s" % [pc, mem[pc], opcode, params]
 
       case opcode
       when 1 # add
