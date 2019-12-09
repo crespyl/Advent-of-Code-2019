@@ -2,6 +2,7 @@
 require "colorize"
 require "../lib/intcode.cr"
 require "../lib/utils.cr"
+require "../lib/vm2.cr"
 
 Intcode.set_debug(Utils.enable_debug_output?)
 INPUT = Utils.get_input_file(Utils.cli_param_or_default(0, "day7/input.txt"))
@@ -10,11 +11,12 @@ INPUT = Utils.get_input_file(Utils.cli_param_or_default(0, "day7/input.txt"))
 def make_amps(phase_settings : Array(Int64), custom_prg = "")
   phase_settings.map_with_index { |phase_setting, i|
     if custom_prg.empty?
-      vm = Intcode::VM.from_string(INPUT)
+      vm = VM2.from_string(INPUT)
     else
-      vm = Intcode::VM.from_string(custom_prg)
+      vm = VM2.from_string(custom_prg)
     end
     vm.name = colorize_name("Amp-#{i}")
+    vm.debug = Utils.enable_debug_output?
     vm.send_input(phase_setting)
     vm
   }
@@ -69,7 +71,7 @@ end
 # Returns the last output of the final vm
 def run_async_vms(vms, links)
   halts = Channel(Bool).new
-  channels = vms.map { |vm| Channel(Int32).new(1) } # channels have a buffer so
+  channels = vms.map { |vm| Channel(Int64).new(1) } # channels have a buffer so
                                                     # that the final send
                                                     # doesn't block waiting for
                                                     # a halted machine to read
@@ -81,7 +83,7 @@ def run_async_vms(vms, links)
           vm.run
         when :needs_input
           if links[i]?
-            puts "   #{vm.name} <- #{vms[links[i]].name}"
+            puts "   #{vm.name} <- #{vms[links[i]].name}" if Utils.enable_debug_output?
             vm.send_input(channels[links[i]].receive)
             vm.run
           else # needs input but there's no linked vm to read it from
@@ -130,7 +132,7 @@ def find_best_serial(inputs)
            2 => 1,
            3 => 2,
            4 => 3}
-  find_best(inputs, ->(amps: Array(Intcode::VM)) { run_linked_vms(amps, links) })
+  find_best(inputs, ->(amps: Array(VM2::VM)) { run_async_vms(amps, links) })
 end
 
 def find_best_feedback(inputs)
@@ -139,7 +141,7 @@ def find_best_feedback(inputs)
            2 => 1,
            3 => 2,
            4 => 3}
-  find_best(inputs, ->(amps: Array(Intcode::VM)) { run_linked_vms(amps, links) })
+  find_best(inputs, ->(amps: Array(VM2::VM)) { run_async_vms(amps, links) })
 end
 
 puts "Part 1"

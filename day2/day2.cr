@@ -1,5 +1,6 @@
 #!/usr/bin/env crystal
 require "../lib/intcode.cr"
+require "../lib/vm2.cr"
 
 Intcode.set_debug(ENV.has_key?("AOC_DEBUG") ? ENV["AOC_DEBUG"] == "true" : false)
 
@@ -109,13 +110,22 @@ vm.run
 puts "Output: #{vm.mem[0]}"
 puts "\n"
 
+puts "Part 1"
+#vm = Intcode::VM.from_file(ARGV[0])
+vm = VM2.from_file(ARGV[0])
+init_puzzle(vm.mem)
+vm.run
+puts "Output: #{vm.mem[0]}"
+puts "\n"
+
 def search_vm(filename="input.txt")
   vm = nil
   results = {noun: 0, verb: 0, output: 0}
 
   (0..99).each do |noun|
     (0..99).each do |verb|
-      vm = Intcode::VM.from_file(filename)
+      #vm = Intcode::VM.from_file(filename)
+      vm = VM2.from_file(filename)
       init_puzzle(vm.mem, noun, verb)
       vm.run
       if vm.mem[0] == 19690720 || (noun > 99 && verb > 99)
