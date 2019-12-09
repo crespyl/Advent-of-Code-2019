@@ -46,8 +46,8 @@ def run_linked_vms(vms, links : Hash(Int32, Int32))
       when :ok then vm.run
       when :needs_input # see if its linked vm has output and copy it over
         if links[i]?
-          puts "   #{vm.name} <- #{vms[links[i]].name}" if Utils.enable_debug_output?
           while linked_output = vms[links[i]].read_output
+            puts "   #{vm.name} <- #{vms[links[i]].name}" if Utils.enable_debug_output?
             vm.send_input(linked_output)
             vm.run
           end
@@ -81,8 +81,8 @@ def run_async_vms(vms, links)
           vm.run
         when :needs_input
           if links[i]?
-            puts "   #{vm.name} <- #{vms[links[i]].name}" if Utils.enable_debug_output?
             vm.send_input(channels[links[i]].receive)
+            puts "   #{vm.name} <- #{vms[links[i]].name}" if Utils.enable_debug_output?
             vm.run
           else # needs input but there's no linked vm to read it from
             break
