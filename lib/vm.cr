@@ -2,14 +2,14 @@ require "./intcode.cr"
 
 module Intcode
   # This class holds the current state of a running interpreter: the memory
-  # (`Array(Int32)`), the program counter, and a "halted/running" flag, and
+  # (`Array(Int64)`), the program counter, and a "halted/running" flag, and
   # buffers for input/output values.
   class VM
     # Name for debugging
     property name : String
 
     # Memory
-    property mem : Array(Int32)
+    property mem : Array(Int64)
 
     # Registers
 
@@ -25,18 +25,18 @@ module Intcode
     property needs_input : Bool
 
     # Input buffer
-    property inputs : Array(Int32)
+    property inputs : Array(Int64)
     # Output buffer
-    property outputs : Array(Int32)
+    property outputs : Array(Int64)
 
-    def initialize(mem)
+    def initialize(mem : Array(Int64))
       @name = "VM"
       @pc = 0
       @halted = false
       @needs_input = false
-      @mem = mem
-      @inputs = [] of Int32
-      @outputs = [] of Int32
+      @mem = 4096.times.collect { |i| mem[i] || 0 }
+      @inputs = [] of Int64
+      @outputs = [] of Int64
     end
 
     # Get the value of the provided parameter, based on the addressing mode
@@ -50,7 +50,7 @@ module Intcode
     end
 
     # Set the address indicated by the parameter to the given value
-    protected def write_param_value(p : Parameter, val : Int32)
+    protected def write_param_value(p : Parameter, val : Int64)
       case p.mode
       when :position then mem[p.val] = val
       when :literal then raise "Cannot write to literal"
@@ -107,7 +107,7 @@ module Intcode
     end
 
     # Add a value to the back of the input buffer
-    def send_input(val : Int32)
+    def send_input(val : Int64)
       inputs << val
       @needs_input = false
     end

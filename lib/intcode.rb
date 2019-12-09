@@ -38,6 +38,7 @@ module Intcode
       case m
       when 0 then :position
       when 1 then :literal
+      when 2 then :relative
       else raise "Unsupported addressing mode #{m}"
       end
     end
@@ -104,12 +105,17 @@ module Intcode
     attr_accessor :inputs
     attr_accessor :outputs
 
+    # relative base
+    attr_accessor :rel_base
+
+
     def initialize(mem,name="VM")
       @name = name
       @pc = 0
+      @rel_base = 0
       @halted = false
       @needs_input = false
-      @mem = mem #Array.new(4096, 0)
+      @mem = 4096.times.collect { |i| mem[i] || 0 }
       @inputs = []
       @outputs = []
       mem.each_with_index do |v, i|
@@ -130,6 +136,7 @@ module Intcode
       case p.mode
       when :position then mem[p.val]
       when :literal then p.val
+      when :relative then mem[@rel_base + p.val]
       else
         raise "Unsupported addressing mode for #{p}"
       end
@@ -140,6 +147,7 @@ module Intcode
       case p.mode
       when :position then mem[p.val] = val
       when :literal then raise "Cannot write to literal"
+      when :relative then mem[@rel_base + p.val] = val
       else
         raise "Unsupported addressing mode for #{p}"
       end
@@ -320,6 +328,16 @@ module Intcode
                     },
                     ->(vm, params) {
                       "EQ  %5s, %5s -> %5s" % params.map { |p| p.debug }
+                    }),
+    9 => Opcode.new(:adj_rel_base,
+                    2,
+                    ->(vm, params) {
+                      x = params.first
+                      vm.rel_base += vm.read_param(x)
+                      vm.pc += 2
+                    },
+                    ->(vm, params) {
+                      "REL  %5s" % params.map { |p| p.debug }
                     }),
     99 => Opcode.new(:halt,
                      1,

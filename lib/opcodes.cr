@@ -41,7 +41,7 @@ module Intcode
 
     # Get the opcode and addressing modes for a given instruction, returns a
     # tuple with the `Opcode` instance and an array of addressing mode symbols
-    private def self.get_opcode_and_modes(instr : Int32)
+    private def self.get_opcode_and_modes(instr : Int64)
       opcode = OPCODES[instr % 100]
       modes = [] of Symbol
 

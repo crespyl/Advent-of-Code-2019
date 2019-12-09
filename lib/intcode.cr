@@ -9,8 +9,8 @@ module Intcode
   # Parse the input string into an array of integers
   def self.read_intcode(str)
     str.split(',')
-      .map { |s| s.to_i }
-      .reject { |x| !x.is_a? Int32 }
+      .map { |s| Int64.new(s) }
+      .reject { |x| !x.is_a? Int64 }
   end
 
   # Load an Intcode program from a filename, returned as an array of Integers
@@ -30,7 +30,7 @@ module Intcode
   # Represents an encoded parameter and its addressing mode, used by both the VM
   # and Opcodes
   struct Parameter
-    property val : Int32   # The original value in memory
+    property val : Int64   # The original value in memory
     property mode : Symbol # The addressing mode
 
     def initialize(@mode, @val) end
