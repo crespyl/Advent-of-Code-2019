@@ -44,16 +44,12 @@ module Intcode
     end
 
     def read_or_grow_mem(address)
-      if mem.size <= address
-        (address-mem.size+1).times { |_| mem << 0 }
-      end
+      (address-mem.size+1).times { |_| mem << 0 } if mem.size <= address
       mem[address]
     end
 
     def write_or_grow_mem(address, val)
-      if mem.size <= address
-        (address-mem.size+1).times { |_| mem << 0 }
-      end
+      (address-mem.size+1).times { |_| mem << 0 } if mem.size <= address
       mem[address] = val
     end
 
