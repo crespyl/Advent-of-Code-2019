@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 require_relative "../lib/intcode.rb"
+require_relative "../lib/vm2.rb"
 
 # The puzzle requires us to set a few addresses to a particular value before
 # execution
@@ -48,13 +49,13 @@ vm.run
 puts "Output: #{vm.mem[0]}"
 puts "\n"
 
-def search_vm(filename="input.txt")
+def search_vm(makevm)
   vm = nil
   results = {noun: 0, verb: 0, output: 0}
 
   (0..99).each do |noun|
     (0..99).each do |verb|
-      vm = Intcode::VM.from_file(filename)
+      vm = makevm.call
       init_puzzle(vm.mem, noun, verb)
       vm.run
       if vm.mem[0] == 19690720 || (noun > 99 && verb > 99)
@@ -70,7 +71,17 @@ end
 puts "Part 2"
 puts "searching..."
 t_start = Time.now
-results = search_vm(ARGV[0])
+results = search_vm(->(){ Intcode::VM.from_file(ARGV[0])})
+puts "search completed in %s" % (Time.now - t_start).to_s
+puts "  output: #{results[:output]}"
+puts "    noun: #{results[:noun]}"
+puts "    verb: #{results[:verb]}"
+puts "solution: #{100 * results[:noun] + results[:verb]}"
+
+puts "Part 2"
+puts "searching..."
+t_start = Time.now
+results = search_vm(->(){ VM2.from_file(ARGV[0])})
 puts "search completed in %s" % (Time.now - t_start).to_s
 puts "  output: #{results[:output]}"
 puts "    noun: #{results[:noun]}"
