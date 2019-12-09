@@ -14,7 +14,10 @@ module Intcode
     # Registers
 
     # The program counter, the address in memory to read the next instruction
-    property pc : Int32
+    property pc : Int64
+
+    # Relative base, used in opcode 9 and relative addressing
+    property rel_base : Int64
 
     # Status flags
 
@@ -32,9 +35,10 @@ module Intcode
     def initialize(mem : Array(Int64))
       @name = "VM"
       @pc = 0
+      @rel_base = 0
       @halted = false
       @needs_input = false
-      @mem = 4096.times.collect { |i| mem[i] || 0 }
+      @mem = Array(Int64).new(4096) { |i| mem.size > i ? mem[i] : 0_i64 }
       @inputs = [] of Int64
       @outputs = [] of Int64
     end
@@ -43,6 +47,7 @@ module Intcode
     protected def read_param(p : Parameter)
       case p.mode
       when :position then mem[p.val]
+      when :relative then mem[@rel_base + p.val]
       when :literal then p.val
       else
         raise "Unsupported addressing mode for #{p}"
@@ -53,6 +58,7 @@ module Intcode
     protected def write_param_value(p : Parameter, val : Int64)
       case p.mode
       when :position then mem[p.val] = val
+      when :relative then mem[@rel_base + p.val] = val
       when :literal then raise "Cannot write to literal"
       else
         raise "Unsupported addressing mode for #{p}"

@@ -1,10 +1,10 @@
 require "../lib/intcode.cr"
 
 module Disasm
-  def self.intcode_to_str(intcode : Array(Int32))
+  def self.intcode_to_str(intcode : Array(Int64))
 
     vm = Intcode::VM.new(intcode)
-    address = 0
+    address = 0_i64
 
     String.build do |str|
       while address < vm.mem.size

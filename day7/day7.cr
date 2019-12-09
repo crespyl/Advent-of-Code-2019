@@ -7,7 +7,7 @@ Intcode.set_debug(Utils.enable_debug_output?)
 INPUT = Utils.get_input_file(Utils.cli_param_or_default(0, "day7/input.txt"))
 
 # Create 5 amplifier progras
-def make_amps(phase_settings, custom_prg = "")
+def make_amps(phase_settings : Array(Int64), custom_prg = "")
   phase_settings.map_with_index { |phase_setting, i|
     if custom_prg.empty?
       vm = Intcode::VM.from_string(INPUT)
@@ -110,7 +110,7 @@ def run_async_vms(vms, links)
 end
 
 # Test each permutation of an input set and find the best
-def find_best(inputs, runner)
+def find_best(inputs : Array(Int64), runner)
   best_settings, best_output = inputs, 0
   inputs.each_permutation do |p|
     amps = make_amps(p)
@@ -143,13 +143,13 @@ def find_best_feedback(inputs)
 end
 
 puts "Part 1"
-inputs = [0,1,2,3,4]
+inputs = (0_i64..4_i64).to_a
 best_settings, best_output = find_best_serial(inputs)
 puts "Best Settings: #{best_settings}"
 puts "Best Output: #{best_output}"
 
 puts "\n Part 2"
-inputs = [5,6,7,8,9]
+inputs = (5_i64..9_i64).to_a
 best_settings, best_output = find_best_feedback(inputs)
 puts "Best Settings: #{best_settings}"
 puts "Best Output: #{best_output}"

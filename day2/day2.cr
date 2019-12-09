@@ -61,9 +61,9 @@ end
 
 # The puzzle requires us to set a few addresses to a particular value before
 # execution
-def init_puzzle(mem, noun=12, verb=2)
-  mem[1] = noun
-  mem[2] = verb
+def init_puzzle(mem, noun=12_i64, verb=2_i64)
+  mem[1] = Int64.new(noun)
+  mem[2] = Int64.new(verb)
 end
 
 # Load an Intcode program from a filename
@@ -80,8 +80,8 @@ def search(filename="input.txt")
   mem = [0]
   results = {noun: 0, verb: 0, output: 0}
 
-  (0..99).each do |noun|
-    (0.99).each do |verb|
+  (0..99_i64).each do |noun|
+    (0..99_i64).each do |verb|
       mem = load_file(filename)
       init_puzzle(mem, noun, verb)
       exec_intcode(mem)
