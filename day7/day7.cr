@@ -90,6 +90,7 @@ def run_async_vms(vms, links)
         when :halted
           break
         end
+        puts "   #{vm.name}: #{vm.status}" if Utils.enable_debug_output?
 
         # send any output to the channel
         while output = vm.read_output
@@ -126,19 +127,20 @@ def find_best(inputs : Array(Int64), runner)
 end
 
 def find_best_serial(inputs)
-  links = {1 => 0,
-           2 => 1,
-           3 => 2,
-           4 => 3}
+  # set up links from each vm n to the previous vm n-1
+  links = (0..inputs.size-1).to_a.cycle.skip(1)
+           .zip((0..inputs.size-1).to_a.cycle)
+           .first(inputs.size-1)
+           .each_with_object({} of Int32 => Int32){|pair,h| h[pair[0]] = pair[1]}
   find_best(inputs, ->(amps : Array(VM2::VM)) { run_async_vms(amps, links) })
 end
 
 def find_best_feedback(inputs)
-  links = {0 => 4,
-           1 => 0,
-           2 => 1,
-           3 => 2,
-           4 => 3}
+  # set up links from each vm n to the previous vm n-1, wrapping
+  links = (0..inputs.size-1).to_a.cycle.skip(1)
+           .zip((0..inputs.size-1).to_a.cycle)
+           .first(inputs.size)
+           .each_with_object({} of Int32 => Int32){|pair,h| h[pair[0]] = pair[1]}
   find_best(inputs, ->(amps : Array(VM2::VM)) { run_async_vms(amps, links) })
 end
 
