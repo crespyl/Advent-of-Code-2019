@@ -43,8 +43,7 @@ module VM2
     end
 
     def read_mem(address)
-      @mem += [0_i64] * (address-@mem.size+1) if @mem.size <= address
-      @mem[address]
+      @mem[address]? || 0_i64
     end
 
     def write_mem(address, val)

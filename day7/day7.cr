@@ -90,7 +90,6 @@ def run_async_vms(vms, links)
         when :halted
           break
         end
-        puts "   #{vm.name}: #{vm.status}" if Utils.enable_debug_output?
 
         # send any output to the channel
         while output = vm.read_output
