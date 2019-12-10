@@ -1,6 +1,4 @@
 #!/usr/bin/env crystal
-require "set"
-
 struct Point
   property x : Int32
   property y : Int32
