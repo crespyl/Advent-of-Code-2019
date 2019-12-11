@@ -158,8 +158,8 @@ def print_map_robot(map, robot)
         print '@'
       else
         case tile
-        when :blank then print " ".colorize(:background => :black)
-        when :black then print " "
+        when :blank then print " "
+        when :black then print " ".colorize(:background => :black)
         when :white then print "#".colorize(:background => :white)
         else print "?".colorize(:background => :red)
         end

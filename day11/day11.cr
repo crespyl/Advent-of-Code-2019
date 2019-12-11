@@ -158,8 +158,8 @@ def print_map_robot(map, robot)
         print '@'
       else
         case tile
-        when :blank then print " ".colorize.back(:black)
-        when :black then print " "
+        when :blank then print " "
+        when :black then print " ".colorize.back(:black)
         when :white then print "#".colorize.back(:white)
         else print "?".colorize.back(:red)
         end
@@ -185,7 +185,9 @@ puts "Robot stopped at: #{robot.x}, #{robot.y}"
 puts "Part 1: %i" % map.count_painted
 
 # part 2
-map = Map.new(50,10)
+WIDTH=50
+HEIGHT=10
+map = Map.new(WIDTH,HEIGHT)
 robot = Robot.new(map, INPUT)
 robot.x = 2
 robot.y = 2
@@ -196,3 +198,10 @@ robot.run
 puts "Robot stopped at: #{robot.x}, #{robot.y}"
 puts "Part 2"
 print_map_robot(map, robot)
+
+pixels = map.tiles.flatten.map { |tile| case tile
+                                        when :black then {0,0,0}
+                                        when :white then {255,255,255}
+                                        else {50,50,50}
+                                        end }
+Utils.write_ppm(WIDTH,HEIGHT, pixels, "day11/output.ppm")
