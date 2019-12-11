@@ -13,6 +13,9 @@ module VM2
     property input : Array(Int64)
     property output : Array(Int64)
 
+    property input_fn : Proc(Int64) | Nil
+    property output_fn : Proc(Int64, Nil) | Nil
+
     def initialize(mem : Array(Int64))
       @name = "VM"
       @debug = false
@@ -34,11 +37,21 @@ module VM2
     end
 
     def read_input
-      if ! @input.empty?
+      if @input_fn
+        @input_fn.try { |f| f.call() }
+      elsif ! @input.empty?
         @input.shift
       else
         @status = :needs_input
         nil
+      end
+    end
+
+    def write_output(val)
+      if @output_fn
+        @output_fn.try { |f| f.call(val) }
+      else
+        @output << val
       end
     end
 
@@ -106,7 +119,7 @@ module VM2
           return :needs_input
         end
       when 4 # output
-        output << read_p(params[0])
+        write_output(read_p(params[0]))
         @pc += 2
       when 5 # jt
         if read_p(params[0]) != 0
@@ -148,6 +161,14 @@ module VM2
 
     def run
       while status != :halted && status != :needs_input && pc < mem.size
+        exec
+      end
+      return status
+    end
+
+    def run_until_io
+      puts "run start"
+      while status != :halted && status != :needs_input && output.size == 0
         exec
       end
       return status
