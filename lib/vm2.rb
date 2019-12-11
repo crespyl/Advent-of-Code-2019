@@ -13,6 +13,9 @@ module VM2
     attr_accessor :input
     attr_accessor :output
 
+    attr_accessor :input_fn
+    attr_accessor :output_fn
+
     def initialize(mem)
       @name = "VM"
       @debug = false
@@ -34,11 +37,21 @@ module VM2
     end
 
     def read_input
-      if ! @input.empty?
+      if @input_fn
+        @input_fn.call()
+      elsif ! @input.empty?
         @input.shift
       else
         @status = :needs_input
         nil
+      end
+    end
+
+    def write_output(val)
+      if @output_fn
+        @output_fn.call(val)
+      else
+        @output << val
       end
     end
 
@@ -107,7 +120,7 @@ module VM2
           return :needs_input
         end
       when 4 # output
-        output << read_p(params[0])
+        write_output(read_p(params[0]))
         @pc += 2
       when 5 # jt
         if read_p(params[0]) != 0
