@@ -10,6 +10,8 @@ module VM2
 
     property status : Symbol
 
+    property cycles : Int64
+
     property input : Array(Int64)
     property output : Array(Int64)
 
@@ -21,6 +23,7 @@ module VM2
       @debug = false
       @pc = 0
       @rel_base = 0
+      @cycles = 0
       @status = :ok
       @mem = mem
       @input = [] of Int64
@@ -101,6 +104,7 @@ module VM2
     end
 
     def exec
+      @cycles += 1
       opcode, params = decode
       log "%5i : %05i : %s" % [pc, mem[pc], VM2.disasm(opcode, params)]
 

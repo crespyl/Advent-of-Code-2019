@@ -43,7 +43,6 @@ class Map
   end
 end
 
-
 class Robot
   attr_accessor :cpu
   attr_accessor :map

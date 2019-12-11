@@ -3,11 +3,7 @@ require "colorize"
 require "../lib/utils.cr"
 require "../lib/vm2.cr"
 
-def log(msg)
-  if Utils.enable_debug_output?
-    puts msg
-  end
-end
+DIRECTIONS = [{0,-1}, {1,0}, {0,1}, {-1,0}]
 
 class Map
   property tiles : Array(Array(Symbol))
@@ -31,15 +27,13 @@ class Map
   end
 
   def count_painted(color=nil)
-    count = 0
-    @tiles.each do |row|
-      row.each do |tile|
+    @tiles.reduce(0) { |sum, row|
+      sum + row.reduce(0) { |rsum, tile|
         if (color && tile == color) || tile != :blank
-          count += 1
-        end
-      end
-    end
-    count
+          rsum + 1
+        else rsum end
+      }
+    }
   end
 end
 
@@ -51,7 +45,7 @@ class Robot
   property x : Int32
   property y : Int32
 
-  property facing : Symbol
+  property facing : Int32
 
   property paint_count : Int32
 
@@ -59,7 +53,7 @@ class Robot
 
   def initialize(map, program)
     @x, @y = 0,0
-    @facing = :up
+    @facing = 0
     @state = :wait_for_paint
     @paint_count = 0
 
@@ -67,41 +61,16 @@ class Robot
 
     @cpu = VM2.from_string(program)
     @cpu.debug = false
-    @cpu.input_fn = ->() { do_camera }
+    @cpu.input_fn = ->() { read_camera }
     @cpu.output_fn = ->(x: Int64) { do_action(x) }
   end
 
-  def rotate_left
-    case @facing
-    when :up then @facing = :left
-    when :left then @facing = :down
-    when :down then @facing = :right
-    when :right then @facing = :up
-    else raise "can't rotate left from #{facing}"
-    end
-  end
-
-  def rotate_right
-    case @facing
-    when :up then @facing = :right
-    when :right then @facing = :down
-    when :down then @facing = :left
-    when :left then @facing = :up
-    else raise "can't rotate right from #{@facing}"
-    end
-  end
-
   def move_forward
-    case @facing
-    when :up then @y -= 1
-    when :right then @x += 1
-    when :down then @y += 1
-    when :left then @x -= 1
-    else raise "can't move forward from #{@facing}"
-    end
+    @x += DIRECTIONS[@facing][0]
+    @y += DIRECTIONS[@facing][1]
   end
 
-  def do_camera
+  def read_camera : Int64
     input = map.get(x,y)
 
     if Utils.enable_debug_output?
@@ -119,14 +88,14 @@ class Robot
     end
   end
 
-  def do_action(a : Int64)
+  def do_action(a : Int64) : Nil
     log "robot #{@state} does action #{a} @ #{@x},#{@y}"
     case @state
     when :wait_for_move
       log "  do move #{a}"
       case a
-      when 0 then rotate_left
-      when 1 then rotate_right
+      when 0 then @facing = (@facing - 1) % 4
+      when 1 then @facing = (@facing + 1) % 4
       else raise "robot can't handle move output #{a}"
       end
       move_forward
@@ -141,7 +110,6 @@ class Robot
       @paint_count += 1
       @state = :wait_for_move
     end
-    return nil
   end
 
   def run
@@ -155,13 +123,13 @@ def print_map_robot(map, robot)
   map.tiles.each_with_index do |row,y|
     row.each_with_index do |tile,x|
       if robot.x == x && robot.y == y
-        print '@'
+        print "@@"
       else
         case tile
-        when :blank then print " "
-        when :black then print " ".colorize.back(:black)
-        when :white then print "#".colorize.back(:white)
-        else print "?".colorize.back(:red)
+        when :blank then print "  "
+        when :black then print "  ".colorize.back(:black)
+        when :white then print "##".colorize.back(:white)
+        else print "??".colorize.back(:red)
         end
       end
     end
@@ -169,25 +137,38 @@ def print_map_robot(map, robot)
   end
 end
 
+def log(msg)
+  if Utils.enable_debug_output?
+    puts msg
+  end
+end
+
 
 INPUT = Utils.get_input_file(Utils.cli_param_or_default(0, "day11/input.txt"))
 
 # part 1
-map = Map.new(100,100) # big enough I guess
+width,height = 100,100
+map = Map.new(width,height) # big enough I guess
 robot = Robot.new(map, INPUT)
-robot.x = 50
-robot.y = 50
+robot.x = width//2
+robot.y = height//2
 
 robot.run
 
 #print_map_robot(map, robot)
-puts "Robot stopped at: #{robot.x}, #{robot.y}"
+pixels = map.tiles.flatten.map { |tile| case tile
+                                        when :black then {0,0,0}
+                                        when :white then {255,255,255}
+                                        else {50,50,50}
+                                        end }
+Utils.write_ppm(width,height, pixels, "day11/output-p1.ppm")
+
+puts "Robot stopped at: #{robot.x}, #{robot.y} (cpu: #{robot.cpu.status}, #{robot.cpu.cycles} cycles)"
 puts "Part 1: %i" % map.count_painted
 
 # part 2
-WIDTH=50
-HEIGHT=10
-map = Map.new(WIDTH,HEIGHT)
+width,height = 50,10
+map = Map.new(width,height)
 robot = Robot.new(map, INPUT)
 robot.x = 2
 robot.y = 2
@@ -204,4 +185,4 @@ pixels = map.tiles.flatten.map { |tile| case tile
                                         when :white then {255,255,255}
                                         else {50,50,50}
                                         end }
-Utils.write_ppm(WIDTH,HEIGHT, pixels, "day11/output.ppm")
+Utils.write_ppm(width,height, pixels, "day11/output-p2.ppm")
