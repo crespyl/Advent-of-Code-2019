@@ -23,6 +23,7 @@ class Debugger
     puts "%s:%s] PC: %s  BASE: %s" % [@vm.name, @vm.status, format_addr_val(@vm.pc), format_addr_val(@vm.rel_base)]
     puts "IN: #{@vm.input}" if @vm.input.size > 0
     print_watches
+    print_disasm(@vm.pc, @vm.pc+25) if @vm.mem.size > 1
   end
 
   def print_watches
@@ -32,6 +33,14 @@ class Debugger
   def print_breaks
     puts "BREAKPOINTS:"
     puts @breakpoints.join("\n")
+  end
+
+  def print_disasm(start,stop)
+    segment = @vm.mem[start..stop]
+    log "showing #{start}..#{stop}"
+
+    dis = Disasm.intcode_to_str(segment, start)
+    log "\n%s\n" % dis
   end
 
   def prompt
@@ -50,11 +59,64 @@ class Debugger
     puts msg
   end
 
+  def run_vm
+    log "running..."
+    start = @vm.cycles
+    while @vm.status == :ok && ! @breakpoints[@vm.pc]?
+      @vm.exec
+    end
+    log "stopped after %s cycles" % [@vm.cycles - start]
+    log " BREAKPOINT: %s" % @breakpoints[@vm.pc] if @breakpoints[@vm.pc]?
+  end
+
+  def load_program(filename)
+    @vm = VM2.from_file(filename)
+    @vm.output_fn = ->(x: Int64) { @output_log << x; log "VM OUTPUT: %i" % x }
+    log "loaded VM (%i)" % @vm.mem.size
+  end
+
+  def step(n,verbose=false)
+    c = @vm.cycles
+    while n > 0 && @vm.status == :ok
+      n -= 1
+      @vm.exec
+      print_vm_summary if verbose
+    end
+    log "stopped after #{@vm.cycles - c} cycles"
+    print_vm_summary
+  end
+
+  def add_breakpoint(name, address)
+    @breakpoints[address] = name
+  end
+
+  def rm_breakpoint(name)
+    @breakpoints.each do |k,v|
+      if v == name
+        @breakpoints[k] = nil
+      end
+    end
+  end
+
+  def add_watch(name, address)
+    @watchlist[name] = address
+  end
+
+  def rm_watch(name)
+    @watchlist[name] = nil
+  end
+
   def run
 
     log "Intcode Debugger Ready"
-    while input = Readline.readline(prompt)
+    while input = Readline.readline(prompt,true)
       line = input.strip
+
+      if line == "" && @vm.mem.size > 1
+        @vm.exec
+        print_vm_summary
+      end
+
       next unless line.match(/.+/)
 
       args = line.split(' ')
@@ -64,48 +126,27 @@ class Debugger
 
       when "load" # load program
         next if args.size < 1
-        @vm = VM2.from_file(args[0])
-        @vm.output_fn = ->(x: Int64) { @output_log << x; log "VM OUTPUT: %i" % x }
-        log "loaded VM (%i)" % @vm.mem.size
+        load_program(args[0])
         print_vm_summary
 
       when "run" # run the machine until it stops, or the pc hits a breakpoint
-        log "running..."
-        start = @vm.cycles
-        while @vm.status == :ok && ! @breakpoints[@vm.pc]?
-          @vm.exec
-        end
-        log "stopped after %s cycles" % [@vm.cycles - start]
-        log " BREAKPOINT: %s" % @breakpoints[@vm.pc] if @breakpoints[@vm.pc]?
-
+        run_vm
 
       when "step" # step foward n steps, ignoring breakpoints
         n = (args[0]? || "1").to_i
         puts "running #{n} steps"
-        c = @vm.cycles
-        while n > 0 && @vm.status == :ok
-          n -= 1
-          @vm.exec
-        end
-        log "stopped after #{@vm.cycles - c} cycles"
-        print_vm_summary
+        step(n)
 
       when "stepv" # step forward n steps, ignoring breakpoints, print state on each step
         n = (args[0]? || "1").to_i
         puts "running #{n} steps"
-        c = @vm.cycles
-        while n > 0 && @vm.status == :ok
-          n -= 1
-          @vm.exec
-          print_vm_summary
-        end
-        log "stopped after #{@vm.cycles - c} cycles"
+        step(n, true)
 
       when "breakpoint"
         if args.size > 0
           addrs = args.in_groups_of(2,"0").map { |a| {a[0], a[1].to_i} }
           addrs.each do |n,a|
-            breakpoints[a] = n
+            add_breakpoint(n,a)
           end
           log "added #{addrs.size} breakpoints"
         else
@@ -116,7 +157,7 @@ class Debugger
         if args.size > 1
           addrs = args.in_groups_of(2,"0").map { |a| {a[0], a[1].to_i} }
           addrs.each do |n,a|
-            watchlist[n] = a
+            add_watch(n,a)
           end
           log "added #{addrs.size} addresses to the watchlist"
         else
@@ -132,20 +173,44 @@ class Debugger
           print_vm_summary
         end
 
+      when "set"
+        next if args.size < 2
+
+        if args[0].match /\d+/
+          a = args[0].to_i64
+          v = args[1].to_i64
+          @vm.write_mem(a,v)
+        else case args[0].downcase
+             when "pc"
+               @vm.pc = args[1].to_i64
+             when "base"
+               @vm.rel_base = args[1].to_i64
+             when "status"
+               case args[1]
+               when "ok"
+                 @vm.status = :ok
+               when "halted"
+                 @vm.status = :halted
+               when "needs_input"
+                 @vm.status = :needs_input
+               else "invalid status"
+               end
+             else log "can't set that"
+             end
+        end
+
+
+
       when "disasm"
         start = args[0]? ? args[0].to_i : @vm.pc
         stop = args[1]? ? args[1].to_i : start+10
 
-        segment = @vm.mem[start..stop]
-        log "showing #{start}..#{stop}"
-
-        dis = Disasm.intcode_to_str(segment, start)
-        log "\n%s\n" % dis
+        print_disasm(start,stop)
 
       when "input" # feed input to the machine
         next unless args.size > 0
         args.each do |a|
-          vm.send_input(Int64.new(a))
+          vm.send_input(a.to_i64)
         end
 
       when "output" # show the machine's output

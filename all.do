@@ -4,7 +4,7 @@ for DAY in $DAYS; do
 done | xargs redo-ifchange
 
 # also redo tools
-TOOLS="disasm"
+TOOLS="disasm debugger"
 for TOOL in $TOOLS; do
     echo "bin/debug/$TOOL"
 done | xargs redo-ifchange
