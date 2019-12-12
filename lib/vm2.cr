@@ -17,6 +17,7 @@ module VM2
 
     property input_fn : Proc(Int64) | Nil
     property output_fn : Proc(Int64, Nil) | Nil
+    property exec_hook_fn : Proc(VM, Nil) | Nil
 
     def initialize(mem : Array(Int64))
       @name = "VM"
@@ -104,6 +105,7 @@ module VM2
     end
 
     def exec
+      @exec_hook_fn.try { |fn| fn.call(self) }
       @cycles += 1
       opcode, params = decode
       log "%5i : %05i : %s" % [pc, mem[pc], VM2.disasm(opcode, params)]

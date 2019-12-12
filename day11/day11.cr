@@ -7,8 +7,12 @@ DIRECTIONS = [{0,-1}, {1,0}, {0,1}, {-1,0}]
 
 class Map
   property tiles : Array(Array(Symbol))
+  property width : Int32
+  property height : Int32
 
   def initialize(width, height)
+    @width = width
+    @height = height
     @tiles = [] of Array(Symbol)
     height.times do
       @tiles << [] of Symbol
@@ -119,6 +123,39 @@ class Robot
   end
 end
 
+def vm_map_pixels(vm, map) : Tuple(Array(Tuple(Int32,Int32,Int32)), Int32, Int32)
+  val_colors = [{0,0,0}, {100,100,100},
+                {0,0,100}, {0,100,0},
+                {100,0,0}, {0,100,100},
+                {100,200,0}]
+  vm_pixels = vm.mem.map_with_index do |v,i|
+    if i == vm.pc
+      {255,255,255}
+    elsif i == vm.rel_base
+      {255,255,0}
+    else
+      val_colors[v % val_colors.size]
+    end
+  end
+
+  map_pixels = map.tiles.flat_map { |row| row }.map { |tile|
+    case tile
+    when :blank then {50,50,50}
+    when :black then {0,0,0}
+    when :white then {200,200,200}
+    else {255,0,0}
+    end
+  }
+
+  vm_padding = vm_pixels.size % map.width
+  vm_pixels.concat ([{0,0,0}] * vm_padding)
+
+  pixels = vm_pixels.concat map_pixels
+
+  lines = pixels.size // map.width
+  {pixels, map.width, lines}
+end
+
 def print_map_robot(map, robot)
   map.tiles.each_with_index do |row,y|
     row.each_with_index do |tile,x|
@@ -126,7 +163,7 @@ def print_map_robot(map, robot)
         print "@@"
       else
         case tile
-        when :blank then print "  "
+        when :blank then print "  ".colorize.back(:black)
         when :black then print "  ".colorize.back(:black)
         when :white then print "##".colorize.back(:white)
         else print "??".colorize.back(:red)
@@ -147,7 +184,7 @@ end
 INPUT = Utils.get_input_file(Utils.cli_param_or_default(0, "day11/input.txt"))
 
 # part 1
-width,height = 100,100
+width,height = 200,200
 map = Map.new(width,height) # big enough I guess
 robot = Robot.new(map, INPUT)
 robot.x = width//2
@@ -174,6 +211,12 @@ robot.x = 2
 robot.y = 2
 
 map.set(robot.x,robot.y, :white)
+
+robot.cpu.exec_hook_fn = ->(vm: VM2::VM) {
+  pixels, width, height = vm_map_pixels(vm, map)
+  Utils.write_ppm(width, height, pixels, "frames/p2-%08i.ppm" % vm.cycles)
+}
+
 robot.run
 
 puts "Robot stopped at: #{robot.x}, #{robot.y}"
@@ -186,3 +229,4 @@ pixels = map.tiles.flatten.map { |tile| case tile
                                         else {50,50,50}
                                         end }
 Utils.write_ppm(width,height, pixels, "day11/output-p2.ppm")
+
