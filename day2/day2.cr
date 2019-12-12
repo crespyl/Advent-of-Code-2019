@@ -63,8 +63,8 @@ end
 # The puzzle requires us to set a few addresses to a particular value before
 # execution
 def init_puzzle(mem, noun = 12_i64, verb = 2_i64)
-  mem[1] = Int64.new(noun)
-  mem[2] = Int64.new(verb)
+  mem[1] = noun.to_i64
+  mem[2] = noun.to_i64
 end
 
 # Load an Intcode program from a filename

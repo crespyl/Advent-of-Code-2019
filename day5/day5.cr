@@ -20,14 +20,14 @@ puts "Outputs: #{vm.output}"
 
 puts "\nPart 2"
 vm = Intcode::VM.from_file(ARGV[0])
-vm.inputs = ARGV.size > 1 ? [Int64.new(ARGV[1])] : [5_i64]
+vm.inputs = ARGV.size > 1 ? [ARGV[1].to_i64] : [5_i64]
 vm.run
 puts "\n"
 puts "Outputs: #{vm.outputs}"
 
 puts "\nPart 2"
 vm = VM2.from_file(ARGV[0])
-vm.input = ARGV.size > 1 ? [Int64.new(ARGV[1])] : [5_i64]
+vm.input = ARGV.size > 1 ? [ARGV[1].to_i64] : [5_i64]
 vm.run
 puts "\n"
 puts "Outputs: #{vm.output}"

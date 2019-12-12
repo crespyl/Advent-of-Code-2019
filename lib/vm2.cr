@@ -213,7 +213,7 @@ module VM2
   end
 
   def self.from_string(str)
-    mem = str.chomp.split(',').map{ |s| Int64.new(s) }
+    mem = str.chomp.split(',').map{ |s| s.to_i64 }
     VM.new(mem)
   end
 

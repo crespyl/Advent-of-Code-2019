@@ -9,7 +9,7 @@ module Intcode
   # Parse the input string into an array of integers
   def self.read_intcode(str)
     str.split(',')
-      .map { |s| Int64.new(s) }
+      .map { |s| s.to_i64 }
       .reject { |x| !x.is_a? Int64 }
   end
 
