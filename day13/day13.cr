@@ -1,26 +1,50 @@
 #!/usr/bin/env crystal
+require "crt"
 require "colorize"
 require "readline"
 require "../lib/utils.cr"
 require "../lib/vm2.cr"
 
 class Display
-  property tiles : Array(Array(Int64))
   property width : Int32
   property height : Int32
-
+  property tiles : Array(Array(Int64))
   property segment : Int64
 
-  def initialize(width, height)
+  property crt : Crt::Window | Nil
+
+
+  def initialize(width, height, curses=false)
     @width = width
     @height = height
     @segment = 0
     @tiles = [] of Array(Int64)
-    height.times do
-      @tiles << [] of Int64
-      width.times do
-        @tiles.last << 0
-      end
+    height.times { @tiles << [0_i64] * width }
+
+    @colormap = {} of Int32 => Crt::ColorPair
+
+    @tilemap = {
+      0 => " ",
+      1 => " ",
+      2 => "=",
+      3 => "@",
+      4 => "o",
+      -1 => "?"
+    }
+
+    if curses
+      @colormap = {
+        0 => Crt::ColorPair.new(Crt::Color::Default, Crt::Color::Default),
+        1 => Crt::ColorPair.new(Crt::Color::White, Crt::Color::White),
+        2 => Crt::ColorPair.new(Crt::Color::White, Crt::Color::Default),
+        3 => Crt::ColorPair.new(Crt::Color::White, Crt::Color::Green),
+        4 => Crt::ColorPair.new(Crt::Color::Blue, Crt::Color::Default),
+        5 => Crt::ColorPair.new(Crt::Color::White, Crt::Color::Blue),
+        -1 => Crt::ColorPair.new(Crt::Color::White, Crt::Color::Red),
+      }
+
+      @crt = Crt::Window.new(height,width)
+    else @crt = nil
     end
   end
 
@@ -34,6 +58,11 @@ class Display
       @segment = val
     else
       @tiles[y][x] = val
+      @crt.try { |crt|
+        crt.attribute_on colormap(val)
+        crt.print(y.to_i32, x.to_i32, tilemap(val))
+        crt.refresh
+      }
     end
   end
 
@@ -48,23 +77,32 @@ class Display
   end
 
   def print_display
-    @tiles.each_with_index do |row,y|
-      row.each_with_index do |tile,x|
-
-        case tile
-        when 0 then print " " #.colorize.back(:black)
-        when 1 then print " ".colorize.back(:white)
-        when 2 then print "=".colorize(:white)
-        when 3 then print "-".colorize(:green)
-        when 4 then print "o".colorize(:white)
-        else print "?".colorize.back(:red)
+    if !@crt
+      @tiles.each_with_index do |row,y|
+        row.each_with_index do |tile,x|
+          print tilemap(tile)
         end
-
+        print "\n"
       end
-      print "\n"
+      puts "SCORE: %i" % @segment
+      puts ""
+    else
+      @crt.try { |crt|
+        crt.attribute_on colormap(0)
+        crt.attribute_on Crt::Attribute::Bold
+        crt.print(@height-1,0, "SCORE: %i" % segment)
+        crt.attribute_off Crt::Attribute::Bold
+        crt.refresh
+      }
     end
-    puts "SCORE: %i" % @segment
-    puts ""
+  end
+
+  def colormap(val)
+    @colormap[val.to_i32]? || @colormap[-1]
+  end
+
+  def tilemap(val)
+    @tilemap[val.to_i32] || @tilemap[-1]
   end
 
 end
@@ -76,24 +114,62 @@ class ArcadeCabinet
   property draw_buffer : Array(Int64)
   property do_hack : Bool
 
-  def initialize(cpu, display)
+  def initialize(cpu, curses=false)
     @cpu = cpu
-    @display = display
+    @display = Display.new(45,26,curses)
     @always_print = false
     @do_hack = false
     @draw_buffer = [] of Int64
 
     @cpu.debug = false
     @cpu.output_fn = ->(x: Int64) { proccess_output(x) }
-    @cpu.input_fn = ->() { get_input }
-    #@cpu.exec_hook_fn = ->(vm: VM2::VM) { do_haxx }
+
+    if curses = false
+      @cpu.input_fn = ->() { get_input }
+    else
+      @cpu.input_fn = ->() {
+        return autopilot if @do_hack
+
+        @display.crt.try { |crt|
+          c = crt.getch
+          log "\n>%i<\n" % c
+          case c
+          when 260 then return -1_i64 # left arrow
+          when 104 then return -1_i64 # h
+
+          when 261 then return  1_i64 # right arrow
+          when 108 then return  1_i64 # l
+
+          when 120 then return autopilot # x
+
+          when 33 then @do_hack=true; autopilot # !
+
+          # exit on q, ^c or esc
+          when 113 then exit
+          when 27  then exit
+          when 3   then exit
+          end
+        }
+        return 0_i64
+      }
+    end
   end
 
   def set_free_play
     @cpu.write_mem(0,2_i64)
   end
 
-  def proccess_output(val : Int64)
+  def autopilot
+    if @cpu.read_mem(392) < @cpu.read_mem(388)
+      1_i64
+    elsif @cpu.read_mem(392) > @cpu.read_mem(388)
+      -1_i64
+    else
+      0_i64
+    end
+  end
+
+  def proccess_output(val : Int64) : Nil
     @draw_buffer << val
     if @draw_buffer.size >= 3
       x,y,id = @draw_buffer.shift(3)
@@ -104,8 +180,13 @@ class ArcadeCabinet
   end
 
   def get_input(display=true) : Int64
+    if @do_hack
+      return autopilot
+    end
+
     @display.print_display
     input = Readline.readline("> ", true)
+
     case input
     when "h" then -1_i64
     when "l" then 1_i64
@@ -115,26 +196,15 @@ class ArcadeCabinet
       puts "ballx: %i" % @cpu.read_mem(388)
       puts "bally: %i" % @cpu.read_mem(389)
       get_input(false)
+    when "x"
+      autopilot
     else
-      if @do_hack
-        if @cpu.read_mem(392) < @cpu.read_mem(388)
-          puts "go right"
-          1_i64
-        elsif @cpu.read_mem(392) > @cpu.read_mem(388)
-          puts "go left"
-          -1_i64
-        else
-          puts "stay put"
-          0_i64
-        end
-      else
-        0_i64
-      end
+      0_i64
     end
   end
 
   def log(msg)
-    puts msg
+    puts msg if Utils.enable_debug_output?
   end
 
   def run
@@ -143,22 +213,32 @@ class ArcadeCabinet
 
 end
 
+if ARGV[0]? == "play"
+  Crt.init
+  Crt.start_color
+  Crt.raw
 
-INPUT = Utils.get_input_file(Utils.cli_param_or_default(0, "day13/input.txt"))
+  cab = ArcadeCabinet.new(VM2.from_file("day13/input.txt"), true)
+  cab.set_free_play
+  cab.always_print = true
+  cab.do_hack = ARGV[1]? == "hax"
+  cab.run
 
-cpu = VM2.from_string(INPUT)
-display = Display.new(45,25)
-cab = ArcadeCabinet.new(cpu, display)
+  Crt.done
+  puts "Game Over\nFinal Score: %i" % cab.display.segment
+else
+  prog = Utils.get_input_file(Utils.cli_param_or_default(0, "day13/input.txt"))
+  # p1
+  cab = ArcadeCabinet.new(VM2.from_string(prog))
+  cab.always_print = false
+  cab.run
+  puts "P1: %i" % cab.display.count_painted(2)
 
-cab.always_print = false
-cab.set_free_play
-cab.do_hack = true
-cab.run
-
-# p1
-#
-# display.print_display
-# puts cab.draw_buffer
-# puts display.count_painted(2)
-
-#puts display.tiles.flat_map { |row| row }.reduce(0) { |sum,tile| tile == 3 ? sum + 1 : sum }
+  # reset for p2
+  cab = ArcadeCabinet.new(VM2.from_string(prog))
+  cab.always_print = false
+  cab.set_free_play
+  cab.do_hack = true
+  cab.run
+  puts "P2: %i" % cab.display.segment
+end
