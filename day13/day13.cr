@@ -77,19 +77,11 @@ class Display
 
   def print_display
     if !@crt
-      # @tiles.flat_map{ |row| row }.map_with_index { |tile,i|
-      #   print tilemap(tile)
-      #   print "\n" if i % @width == 0
-      #   end
-      # }
-      @tiles.each_with_index do |row,y|
-        row.each_with_index do |tile,x|
-          print tilemap(tile)
-        end
-        print "\n"
-      end     
-      puts "SCORE: %i" % @segment
-      puts ""
+      @tiles.flat_map{ |row| row }.map_with_index { |tile,i|
+        print "\n" if i % @width == 0
+        print tilemap(tile)
+      }
+      puts "\nSCORE: %i" % @segment
     else
       @crt.try { |crt|
         crt.attribute_on colormap(0)
