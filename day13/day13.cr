@@ -227,7 +227,6 @@ if ARGV[0]? == "play"
   cab = ArcadeCabinet.new(VM2.from_file(Utils.cli_param_or_default(1, "day13/input.txt")), true)
   cab.set_free_play
   cab.always_print = true
-  cab.do_hack = ARGV[1]? == "hax"
   cab.run
 
   # pause before exiting
