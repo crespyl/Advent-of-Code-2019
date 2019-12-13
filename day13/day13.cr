@@ -1,6 +1,5 @@
 #!/usr/bin/env crystal
 require "crt"
-require "colorize"
 require "readline"
 require "../lib/utils.cr"
 require "../lib/vm2.cr"
@@ -127,31 +126,7 @@ class ArcadeCabinet
     if curses = false
       @cpu.input_fn = ->() { get_input }
     else
-      @cpu.input_fn = ->() {
-        return autopilot if @do_hack
-
-        @display.crt.try { |crt|
-          c = crt.getch
-          log "\n>%i<\n" % c
-          case c
-          when 260 then return -1_i64 # left arrow
-          when 104 then return -1_i64 # h
-
-          when 261 then return  1_i64 # right arrow
-          when 108 then return  1_i64 # l
-
-          when 120 then return autopilot # x
-
-          when 33 then @do_hack=true; autopilot # !
-
-          # exit on q, ^c or esc
-          when 113 then exit
-          when 27  then exit
-          when 3   then exit
-          end
-        }
-        return 0_i64
-      }
+      @cpu.input_fn = ->() { get_curses_input }
     end
   end
 
@@ -201,6 +176,32 @@ class ArcadeCabinet
     else
       0_i64
     end
+  end
+
+  def get_curses_input
+    return autopilot if @do_hack
+
+    @display.crt.try { |crt|
+      c = crt.getch
+      log "\n>%i<\n" % c
+      case c
+      when 260 then return -1_i64 # left arrow
+      when 104 then return -1_i64 # h
+
+      when 261 then return  1_i64 # right arrow
+      when 108 then return  1_i64 # l
+
+      when 120 then return autopilot # x
+
+      when 33 then @do_hack=true; autopilot # !
+
+      # exit on q, ^c or esc
+      when 113 then exit
+      when 27  then exit
+      when 3   then exit
+      end
+    }
+    return 0_i64
   end
 
   def log(msg)

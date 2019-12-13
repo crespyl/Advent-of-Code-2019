@@ -1,0 +1,10 @@
+language: crystal
+crystal:
+  - latest
+addons:
+  apt:
+    packages:
+    - libgpm-dev
+    - libncursesw5-dev
+script:
+  - make test
