@@ -25,7 +25,7 @@ class Display
     @tilemap = {
       0 => " ",
       1 => " ",
-      2 => "=",
+      2 => " ",
       3 => "@",
       4 => "o",
       -1 => "?"
@@ -35,7 +35,7 @@ class Display
       @colormap = {
         0 => Crt::ColorPair.new(Crt::Color::Default, Crt::Color::Default),
         1 => Crt::ColorPair.new(Crt::Color::White, Crt::Color::White),
-        2 => Crt::ColorPair.new(Crt::Color::White, Crt::Color::Default),
+        2 => Crt::ColorPair.new(Crt::Color::White, Crt::Color::Cyan),
         3 => Crt::ColorPair.new(Crt::Color::White, Crt::Color::Green),
         4 => Crt::ColorPair.new(Crt::Color::Blue, Crt::Color::Default),
         5 => Crt::ColorPair.new(Crt::Color::White, Crt::Color::Blue),
