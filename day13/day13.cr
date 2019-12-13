@@ -12,8 +12,7 @@ class Display
 
   property crt : Crt::Window | Nil
 
-
-  def initialize(width, height, curses=false)
+  def initialize(width, height, curses = false)
     @width = width
     @height = height
     @segment = 0
@@ -23,35 +22,36 @@ class Display
     @colormap = {} of Int32 => Crt::ColorPair
 
     @tilemap = {
-      0 => " ",
-      1 => "#",
-      2 => "=",
-      3 => "@",
-      4 => "o",
-      -1 => "?"
+       0 => " ",
+       1 => "#",
+       2 => "=",
+       3 => "@",
+       4 => "o",
+      -1 => "?",
     }
 
     if curses
       @colormap = {
-        0 => Crt::ColorPair.new(Crt::Color::Default, Crt::Color::Default),
-        1 => Crt::ColorPair.new(Crt::Color::White, Crt::Color::White),
-        2 => Crt::ColorPair.new(Crt::Color::Cyan, Crt::Color::Cyan),
-        3 => Crt::ColorPair.new(Crt::Color::Green, Crt::Color::Default),
-        4 => Crt::ColorPair.new(Crt::Color::Blue, Crt::Color::Default),
-        5 => Crt::ColorPair.new(Crt::Color::White, Crt::Color::Blue),
+         0 => Crt::ColorPair.new(Crt::Color::Default, Crt::Color::Default),
+         1 => Crt::ColorPair.new(Crt::Color::White, Crt::Color::White),
+         2 => Crt::ColorPair.new(Crt::Color::Cyan, Crt::Color::Cyan),
+         3 => Crt::ColorPair.new(Crt::Color::Green, Crt::Color::Default),
+         4 => Crt::ColorPair.new(Crt::Color::Blue, Crt::Color::Default),
+         5 => Crt::ColorPair.new(Crt::Color::White, Crt::Color::Blue),
         -1 => Crt::ColorPair.new(Crt::Color::White, Crt::Color::Red),
       }
 
-      @crt = Crt::Window.new(height,width)
-    else @crt = nil
+      @crt = Crt::Window.new(height, width)
+    else
+      @crt = nil
     end
   end
 
-  def get(x,y)
+  def get(x, y)
     @tiles[y][x]
   end
 
-  def set(x,y,val)
+  def set(x, y, val)
     if x < 0
       # segment display
       @segment = val
@@ -65,8 +65,8 @@ class Display
     end
   end
 
-  def count_painted(color=nil)
-    @tiles.flat_map { |row| row }.reduce(0) { |sum,tile|
+  def count_painted(color = nil)
+    @tiles.flat_map { |row| row }.reduce(0) { |sum, tile|
       if color
         tile == color ? sum + 1 : sum
       else
@@ -77,7 +77,7 @@ class Display
 
   def print_display
     if !@crt
-      @tiles.flat_map{ |row| row }.map_with_index { |tile,i|
+      @tiles.flat_map { |row| row }.map_with_index { |tile, i|
         print "\n" if i % @width == 0
         print tilemap(tile)
       }
@@ -86,7 +86,7 @@ class Display
       @crt.try { |crt|
         crt.attribute_on colormap(0)
         crt.attribute_on Crt::Attribute::Bold
-        crt.print(@height-1,0, "SCORE: %i" % segment)
+        crt.print(@height - 1, 0, "SCORE: %i" % segment)
         crt.attribute_off Crt::Attribute::Bold
         crt.refresh
       }
@@ -100,7 +100,6 @@ class Display
   def tilemap(val)
     @tilemap[val.to_i32] || @tilemap[-1]
   end
-
 end
 
 class ArcadeCabinet
@@ -110,25 +109,25 @@ class ArcadeCabinet
   property draw_buffer : Array(Int64)
   property do_hack : Bool
 
-  def initialize(cpu, curses=false)
+  def initialize(cpu, curses = false)
     @cpu = cpu
-    @display = Display.new(45,26,curses)
+    @display = Display.new(45, 26, curses)
     @always_print = false
     @do_hack = false
     @draw_buffer = [] of Int64
 
     @cpu.debug = false
-    @cpu.output_fn = ->(x: Int64) { proccess_output(x) }
+    @cpu.output_fn = ->(x : Int64) { proccess_output(x) }
 
     if curses = false
-      @cpu.input_fn = ->() { get_input }
+      @cpu.input_fn = ->{ get_input }
     else
-      @cpu.input_fn = ->() { get_curses_input }
+      @cpu.input_fn = ->{ get_curses_input }
     end
   end
 
   def set_free_play
-    @cpu.write_mem(0,2_i64)
+    @cpu.write_mem(0, 2_i64)
   end
 
   def autopilot
@@ -138,14 +137,14 @@ class ArcadeCabinet
   def proccess_output(val : Int64) : Nil
     @draw_buffer << val
     if @draw_buffer.size >= 3
-      x,y,id = @draw_buffer.shift(3)
+      x, y, id = @draw_buffer.shift(3)
 
-      @display.set(x,y,id)
+      @display.set(x, y, id)
       @display.print_display if @always_print
     end
   end
 
-  def get_input(display=true) : Int64
+  def get_input(display = true) : Int64
     return autopilot if @do_hack
 
     @display.print_display
@@ -175,24 +174,24 @@ class ArcadeCabinet
       log "\n>%i<\n" % c
       case c
       when 260, 'h'.ord then return -1_i64 # left arrow or h
-      when 261, 'l'.ord then return  1_i64 # right arrow or l
-      when 'x'.ord then return autopilot # x
+      when 261, 'l'.ord then return 1_i64  # right arrow or l
+      when 'x'.ord then return autopilot   # x
 
-      when '!'.ord then @do_hack=true; autopilot # !
+      when '!'.ord then @do_hack = true; autopilot # !
 
       when '?'.ord # ?
         buf = [] of Int32
-        crt.move(@display.height+1,0)
+        crt.move(@display.height + 1, 0)
         crt.attribute_on @display.colormap(5)
         Crt.echo
         while (i = crt.getch) != 13
           buf << i
         end
         Crt.noecho
-        crt.puts "got str: >%s<" % buf.map{ |i| i.chr }.join
+        crt.puts "got str: >%s<" % buf.map { |i| i.chr }.join
         0
 
-      # exit on q, ^c or esc
+        # exit on q, ^c or esc
       when 'q'.ord, 27, 3 then @cpu.status = :halted
       end
     }
@@ -206,7 +205,6 @@ class ArcadeCabinet
   def run
     @cpu.run
   end
-
 end
 
 if ARGV[0]? == "play"
@@ -222,7 +220,7 @@ if ARGV[0]? == "play"
   # pause before exiting
   cab.display.crt.try { |c|
     c.attribute_on(cab.display.colormap(5))
-    c.print(cab.display.height//3,3, "Game Over, press any key to continue")
+    c.print(cab.display.height//3, 3, "Game Over, press any key to continue")
     c.refresh
     c.getch
   }
