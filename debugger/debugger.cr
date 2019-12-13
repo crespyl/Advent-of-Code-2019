@@ -71,7 +71,9 @@ class Debugger
 
   def load_program(filename)
     @vm = VM2.from_file(filename)
-    @vm.output_fn = ->(x: Int64) { @output_log << x; log "VM OUTPUT: %i" % x }
+    @vm.output_fn = ->(x: Int64) {
+      @output_log << x; log "VM OUTPUT: %5i   (%s)" % [x,x.chr.ascii_control? ? ' ' : x.chr]
+    }
     log "loaded VM (%i)" % @vm.mem.size
   end
 
@@ -109,6 +111,12 @@ class Debugger
   def run
 
     log "Intcode Debugger Ready"
+
+    if ARGV[0]?
+      load_program ARGV[0]
+      log "Loaded Program: %s" % ARGV[0]
+    end
+
     while input = Readline.readline(prompt,true)
       line = input.strip
 

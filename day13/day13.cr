@@ -174,13 +174,13 @@ class ArcadeCabinet
       c = crt.getch
       log "\n>%i<\n" % c
       case c
-      when 260, 104 then return -1_i64 # left arrow or h
-      when 261, 108 then return  1_i64 # right arrow or l
-      when 120 then return autopilot # x
+      when 260, 'h'.ord then return -1_i64 # left arrow or h
+      when 261, 'l'.ord then return  1_i64 # right arrow or l
+      when 'x'.ord then return autopilot # x
 
-      when 33 then @do_hack=true; autopilot # !
+      when '!'.ord then @do_hack=true; autopilot # !
 
-      when 63 # ?
+      when '?'.ord # ?
         buf = [] of Int32
         crt.move(@display.height+1,0)
         crt.attribute_on @display.colormap(5)
@@ -189,11 +189,11 @@ class ArcadeCabinet
           buf << i
         end
         Crt.noecho
-        crt.puts "got str: >%s<" % buf.map{ |i| i.unsafe_chr }.join
+        crt.puts "got str: >%s<" % buf.map{ |i| i.chr }.join
         0
 
       # exit on q, ^c or esc
-      when 113, 27, 3 then @cpu.status = :halted
+      when 'q'.ord, 27, 3 then @cpu.status = :halted
       end
     }
     return 0_i64
