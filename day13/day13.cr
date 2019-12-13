@@ -135,13 +135,7 @@ class ArcadeCabinet
   end
 
   def autopilot
-    if @cpu.read_mem(392) < @cpu.read_mem(388)
-      1_i64
-    elsif @cpu.read_mem(392) > @cpu.read_mem(388)
-      -1_i64
-    else
-      0_i64
-    end
+    (@cpu.read_mem(388) <=> @cpu.read_mem(392)).to_i64
   end
 
   def proccess_output(val : Int64) : Nil
@@ -185,20 +179,26 @@ class ArcadeCabinet
       c = crt.getch
       log "\n>%i<\n" % c
       case c
-      when 260 then return -1_i64 # left arrow
-      when 104 then return -1_i64 # h
-
-      when 261 then return  1_i64 # right arrow
-      when 108 then return  1_i64 # l
-
+      when 260, 104 then return -1_i64 # left arrow or h
+      when 261, 108 then return  1_i64 # right arrow l
       when 120 then return autopilot # x
 
       when 33 then @do_hack=true; autopilot # !
 
+      when 63 # ?
+        buf = [] of Int32
+        crt.move(@display.height+1,0)
+        crt.attribute_on @display.colormap(5)
+        Crt.echo
+        while (i = crt.getch) != 13
+          buf << i
+        end
+        Crt.noecho
+        crt.puts "got str: >%s<" % buf
+        0
+
       # exit on q, ^c or esc
-      when 113 then exit
-      when 27  then exit
-      when 3   then exit
+      when 113, 27, 3 then @cpu.status = :halted
       end
     }
     return 0_i64
@@ -219,13 +219,15 @@ if ARGV[0]? == "play"
   Crt.start_color
   Crt.raw
 
-  cab = ArcadeCabinet.new(VM2.from_file("day13/input.txt"), true)
+  cab = ArcadeCabinet.new(VM2.from_file(Utils.cli_param_or_default(1, "day13/input.txt")), true)
   cab.set_free_play
   cab.always_print = true
   cab.do_hack = ARGV[1]? == "hax"
   cab.run
+  cab.display.crt.try { |c| c.getch } # pause before exiting
 
   Crt.done
+
   puts "Game Over\nFinal Score: %i" % cab.display.segment
 else
   prog = Utils.get_input_file(Utils.cli_param_or_default(0, "day13/input.txt"))
