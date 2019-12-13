@@ -24,8 +24,8 @@ class Display
 
     @tilemap = {
       0 => " ",
-      1 => " ",
-      2 => " ",
+      1 => "#",
+      2 => "=",
       3 => "@",
       4 => "o",
       -1 => "?"
@@ -35,8 +35,8 @@ class Display
       @colormap = {
         0 => Crt::ColorPair.new(Crt::Color::Default, Crt::Color::Default),
         1 => Crt::ColorPair.new(Crt::Color::White, Crt::Color::White),
-        2 => Crt::ColorPair.new(Crt::Color::White, Crt::Color::Cyan),
-        3 => Crt::ColorPair.new(Crt::Color::White, Crt::Color::Green),
+        2 => Crt::ColorPair.new(Crt::Color::Cyan, Crt::Color::Cyan),
+        3 => Crt::ColorPair.new(Crt::Color::Green, Crt::Color::Default),
         4 => Crt::ColorPair.new(Crt::Color::Blue, Crt::Color::Default),
         5 => Crt::ColorPair.new(Crt::Color::White, Crt::Color::Blue),
         -1 => Crt::ColorPair.new(Crt::Color::White, Crt::Color::Red),
@@ -77,12 +77,17 @@ class Display
 
   def print_display
     if !@crt
+      # @tiles.flat_map{ |row| row }.map_with_index { |tile,i|
+      #   print tilemap(tile)
+      #   print "\n" if i % @width == 0
+      #   end
+      # }
       @tiles.each_with_index do |row,y|
         row.each_with_index do |tile,x|
           print tilemap(tile)
         end
         print "\n"
-      end
+      end     
       puts "SCORE: %i" % @segment
       puts ""
     else
@@ -224,7 +229,14 @@ if ARGV[0]? == "play"
   cab.always_print = true
   cab.do_hack = ARGV[1]? == "hax"
   cab.run
-  cab.display.crt.try { |c| c.getch } # pause before exiting
+
+  # pause before exiting
+  cab.display.crt.try { |c|
+    c.attribute_on(cab.display.colormap(5))
+    c.print(cab.display.height//3,3, "Game Over, press any key to continue")
+    c.refresh
+    c.getch
+  }
 
   Crt.done
 
@@ -235,6 +247,7 @@ else
   cab = ArcadeCabinet.new(VM2.from_string(prog))
   cab.always_print = false
   cab.run
+  cab.display.print_display
   puts "P1: %i" % cab.display.count_painted(2)
 
   # reset for p2

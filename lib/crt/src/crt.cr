@@ -28,6 +28,14 @@ module Crt
     at_exit { Crt.done }
   end
 
+  def self.echo
+    LibNcursesw.echo
+  end
+
+  def self.noecho
+    LibNcursesw.noecho
+  end
+
   def self.done
     if @@initialized
       LibNcursesw.curs_set(1)
