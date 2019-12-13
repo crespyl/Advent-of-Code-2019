@@ -146,9 +146,7 @@ class ArcadeCabinet
   end
 
   def get_input(display=true) : Int64
-    if @do_hack
-      return autopilot
-    end
+    return autopilot if @do_hack
 
     @display.print_display
     input = Readline.readline("> ", true)
