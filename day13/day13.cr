@@ -97,9 +97,6 @@ class ArcadeCabinet
     @draw_buffer << val
     if @draw_buffer.size >= 3
       x,y,id = @draw_buffer.shift(3)
-      if id > 4
-        log "BAD TILE ID #{id}"
-      end
 
       @display.set(x,y,id)
       @display.print_display if @always_print
