@@ -199,13 +199,14 @@ class Debugger
              end
         end
 
-
-
       when "disasm"
         start = args[0]? ? args[0].to_i : @vm.pc
         stop = args[1]? ? args[1].to_i : start+10
 
         print_disasm(start,stop)
+
+      when "dump"
+        File.write(args[0]? || "dump.txt", vm.mem.map{ |v| v.to_s }.join(","))
 
       when "input" # feed input to the machine
         next unless args.size > 0
