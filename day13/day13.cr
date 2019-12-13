@@ -177,7 +177,7 @@ class ArcadeCabinet
       log "\n>%i<\n" % c
       case c
       when 260, 104 then return -1_i64 # left arrow or h
-      when 261, 108 then return  1_i64 # right arrow l
+      when 261, 108 then return  1_i64 # right arrow or l
       when 120 then return autopilot # x
 
       when 33 then @do_hack=true; autopilot # !
@@ -191,7 +191,7 @@ class ArcadeCabinet
           buf << i
         end
         Crt.noecho
-        crt.puts "got str: >%s<" % buf
+        crt.puts "got str: >%s<" % buf.map{ |i| i.unsafe_chr }.join
         0
 
       # exit on q, ^c or esc
