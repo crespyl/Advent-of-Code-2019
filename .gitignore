@@ -4,3 +4,4 @@ big.txt
 *.ppm
 tmp
 tmp/*
+frames/*

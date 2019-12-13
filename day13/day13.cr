@@ -3,24 +3,22 @@ require "crt"
 require "readline"
 require "../lib/utils.cr"
 require "../lib/vm2.cr"
+require "../lib/display.cr"
 
-class Display
-  property width : Int32
-  property height : Int32
-  property tiles : Array(Array(Int64))
+class SegmentDisplay < Display
   property segment : Int64
 
-  property crt : Crt::Window | Nil
-
-  def initialize(width, height, curses = false)
+  def initialize(@width, @height, curses = false)
     @width = width
     @height = height
-    @segment = 0
     @tiles = [] of Array(Int64)
     height.times { @tiles << [0_i64] * width }
 
-    @colormap = {} of Int32 => Crt::ColorPair
+    @crt = Crt::Window.new(height, width) if curses
 
+    @segment = 0
+
+    @colormap = {} of Int32 => Crt::ColorPair
     @tilemap = {
        0 => " ",
        1 => "#",
@@ -40,15 +38,7 @@ class Display
          5 => Crt::ColorPair.new(Crt::Color::White, Crt::Color::Blue),
         -1 => Crt::ColorPair.new(Crt::Color::White, Crt::Color::Red),
       }
-
-      @crt = Crt::Window.new(height, width)
-    else
-      @crt = nil
     end
-  end
-
-  def get(x, y)
-    @tiles[y][x]
   end
 
   def set(x, y, val)
@@ -65,34 +55,6 @@ class Display
     end
   end
 
-  def count_painted(color = nil)
-    @tiles.flat_map { |row| row }.reduce(0) { |sum, tile|
-      if color
-        tile == color ? sum + 1 : sum
-      else
-        tile != 0 ? sum + 1 : sum
-      end
-    }
-  end
-
-  def print_display
-    if !@crt
-      @tiles.flat_map { |row| row }.map_with_index { |tile, i|
-        print "\n" if i % @width == 0
-        print tilemap(tile)
-      }
-      puts "\nSCORE: %i" % @segment
-    else
-      @crt.try { |crt|
-        crt.attribute_on colormap(0)
-        crt.attribute_on Crt::Attribute::Bold
-        crt.print(@height - 1, 0, "SCORE: %i" % segment)
-        crt.attribute_off Crt::Attribute::Bold
-        crt.refresh
-      }
-    end
-  end
-
   def colormap(val)
     @colormap[val.to_i32]? || @colormap[-1]
   end
@@ -100,18 +62,28 @@ class Display
   def tilemap(val)
     @tilemap[val.to_i32] || @tilemap[-1]
   end
+
+  def rgbmap(val)
+    case val
+    when 1 then {255,255,255}
+    when 2 then {255,255,0}
+    when 3 then {0,255,0}
+    when 4 then {0,0,255}
+    else {0,0,0}
+    end
+  end
 end
 
 class ArcadeCabinet
   property cpu : VM2::VM
-  property display : Display
+  property display : SegmentDisplay
   property always_print : Bool
   property draw_buffer : Array(Int64)
   property do_hack : Bool
 
   def initialize(cpu, curses = false)
     @cpu = cpu
-    @display = Display.new(45, 26, curses)
+    @display = SegmentDisplay.new(45, 26, curses)
     @always_print = false
     @do_hack = false
     @draw_buffer = [] of Int64
@@ -141,6 +113,10 @@ class ArcadeCabinet
 
       @display.set(x, y, id)
       @display.print_display if @always_print
+
+      @frame = @frame ? @frame.try{ |f| f+1 } : 0
+      pixels = @display.to_pixels
+      Utils.write_ppm(@display.width,@display.height, pixels, "frames/frame-%08i.ppm" % @frame)
     end
   end
 
@@ -148,6 +124,7 @@ class ArcadeCabinet
     return autopilot if @do_hack
 
     @display.print_display
+
     input = Readline.readline("> ", true)
 
     case input
@@ -234,7 +211,9 @@ else
   cab = ArcadeCabinet.new(VM2.from_string(prog))
   cab.always_print = false
   cab.run
+
   cab.display.print_display
+
   puts "P1: %i" % cab.display.count_painted(2)
 
   # reset for p2
