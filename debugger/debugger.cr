@@ -216,6 +216,9 @@ class Debugger
       when "output" # show the machine's output
         log @output_log
 
+      when "otext"
+        log @output_log.map{ |v| v.unsafe_chr }.join
+
       when "exit"
         log "goodbye"
         break
