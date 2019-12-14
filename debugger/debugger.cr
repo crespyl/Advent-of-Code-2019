@@ -12,16 +12,20 @@ class Debugger
 
   property output_log : Array(Int64)
 
+  property io_mode : Symbol
+
   def initialize()
     @vm = VM2::VM.new([0_i64])
     @watchlist = {} of String => Int32
     @breakpoints = {} of Int32 => String
     @output_log = [] of Int64
+    @io_mode = :int
   end
 
   def print_vm_summary
     puts "%s:%s] PC: %s  BASE: %s" % [@vm.name, @vm.status, format_addr_val(@vm.pc), format_addr_val(@vm.rel_base)]
     puts "IN: #{@vm.input}" if @vm.input.size > 0
+    puts "ERR: %s" % @vm.error if @vm.error
     print_watches
     print_disasm(@vm.pc, @vm.pc+25) if @vm.mem.size > 1
   end
@@ -60,19 +64,24 @@ class Debugger
   end
 
   def run_vm
-    log "running..."
+    log "running...\n"
     start = @vm.cycles
     while @vm.status == :ok && ! @breakpoints[@vm.pc]?
       @vm.exec
     end
-    log "stopped after %s cycles" % [@vm.cycles - start]
+    log "\nstopped after %s cycles" % [@vm.cycles - start]
     log " BREAKPOINT: %s" % @breakpoints[@vm.pc] if @breakpoints[@vm.pc]?
+    print_vm_summary
   end
 
   def load_program(filename)
     @vm = VM2.from_file(filename)
     @vm.output_fn = ->(x: Int64) {
-      @output_log << x; log "VM OUTPUT: %5i   (%s)" % [x,x.chr.ascii_control? ? ' ' : x.chr]
+      @output_log << x;
+      case @io_mode
+      when :int then log "VM OUTPUT: %5i   (%s)" % [x,x.chr.ascii_control? ? ' ' : x.chr]
+      when :text then print (x >= 0 ? x.chr : "{chr: %i}" % x)
+      end
     }
     log "loaded VM (%i)" % @vm.mem.size
   end
@@ -193,7 +202,7 @@ class Debugger
                @vm.pc = args[1].to_i64
              when "base"
                @vm.rel_base = args[1].to_i64
-             when "status"
+             when "status", "state"
                case args[1]
                when "ok"
                  @vm.status = :ok
@@ -201,7 +210,15 @@ class Debugger
                  @vm.status = :halted
                when "needs_input"
                  @vm.status = :needs_input
-               else "invalid status"
+               else log "invalid status"
+               end
+             when "io"
+               case args[1]
+               when "int", "num"
+                 @io_mode = :int
+               when "text", "ascii"
+                 @io_mode = :text
+               else log "invalid io mode"
                end
              else log "can't set that"
              end
@@ -218,8 +235,14 @@ class Debugger
 
       when "input" # feed input to the machine
         next unless args.size > 0
-        args.each do |a|
-          vm.send_input(a.to_i64)
+        case @io_mode
+        when :int
+          args.each do |a|
+            vm.send_input(a.to_i64)
+          end
+        when :text
+          str = args.join(" ")
+          str.chars.map { |c| c.ord.to_i64 }.each { |ascii| vm.send_input(ascii) }
         end
 
       when "output" # show the machine's output

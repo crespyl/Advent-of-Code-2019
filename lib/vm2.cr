@@ -9,6 +9,7 @@ module VM2
     property rel_base : Int64
 
     property status : Symbol
+    property error : String | Nil
 
     property cycles : Int64
 
@@ -160,7 +161,8 @@ module VM2
         @status = :halted
         @pc += 1
       else
-        raise "invalid opcode at #{pc}"
+        @status = :halted
+        @error = "invalid opcode at #{pc}"
       end
 
     end
