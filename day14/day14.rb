@@ -1,8 +1,5 @@
 #!/usr/bin/env ruby
-
 require_relative "../lib/utils.rb"
-
-INPUT = Utils.cli_param_or_default(0,"sample.txt")
 
 Value = Struct.new(:resource, :amount)
 
@@ -43,10 +40,6 @@ def parse_file(filename)
     .freeze
 end
 
-rules = parse_file(INPUT)
-puts "GOT RULES:"
-puts rules.map { |k,v| "%s: %s" % [k.to_s, v.to_s] }
-
 # take a list that might contain several values with the same resource and fold
 # them into one value for each resource
 def collapse_values(values)
@@ -55,16 +48,13 @@ def collapse_values(values)
   }.map { |k,v| Value.new(k,v) }
 end
 
-# value indicates a specific number of a specific resource
+# get the requirements necessary to produce the requested value
 def reqs_for_value(rules, value)
-  #puts "FINDING %s" % value.to_s
   rule = rules[value.resource]
   return [[],0]  unless rule && value.amount > 0
  
   reqs = rule.requirements.map { |v| Value.new(v.resource, v.amount) }
   excess = 0
-  # puts rule.to_s
-  # puts value.to_s
 
   if rule.output.amount >= value.amount
     # one application of this rule is enough
@@ -78,57 +68,65 @@ def reqs_for_value(rules, value)
   [reqs, excess]
 end
 
-# take 2
-def breakdown(rules, values)
+# breakdown a value into the amount of ore necessary to produce it
+def breakdown(rules, value)
+  values = [value]
 
   produced = Hash.new(0)
   consumed = Hash.new(0)
 
-  puts "==== breakdown start ===="
-  puts produced
-  puts consumed
-  puts values
-  puts rules
-
   while ! values.empty? && ! values.all? { |v| v.resource == "ORE" }
     values = collapse_values(values)
-   
-    puts "==== step ===="
-    puts values.map { |v| v.to_s }
-    puts "--------------"
-
     needed = values.shift
-
     reqs, extra = reqs_for_value(rules, needed)
 
     reqs.each do |req|
       available = produced[req.resource] - consumed[req.resource]
-      puts "> #{available}/#{req.amount} #{req.resource} AVAILABLE"
-      # check if we have some available already
       if produced[req.resource] > 0 && produced[req.resource] >= consumed[req.resource]
 
         if available >= req.amount
-          puts "> CONSUMED SOME AVAILABLE #{req.to_s}"
           consumed[req.resource] += req.amount
           req.amount = 0
         elsif available > 0 && available < req.amount
-          puts "> CONSUMED #{available} AVAILABLE #{req.resource}"
           consumed[req.resource] += available
           req.amount -= available
         end
       end
 
       consumed[req.resource] += req.amount
-      puts "> CONSUMED [#{consumed[req.resource]}] +#{req.to_s}"
     end
 
     produced[needed.resource] += needed.amount + extra
-    puts "> PRODUCED [#{produced[needed.resource]}] +#{needed.amount+extra} (#{needed.amount} + #{extra}) #{needed.resource}"
 
     values += reqs
   end
 
-  puts collapse_values(values).map { |v| v.to_s }
-  puts " >%s< " % consumed["ORE"]
-  return [consumed, produced]
+  return consumed["ORE"]
 end
+
+def find_max_fuel_for_ore(rules, ore)
+  low, high = 0, ore
+  pivot = low + ((high-low) / 2)
+
+  while (pivot != high && pivot != low)
+    case breakdown(rules, Value.new("FUEL", pivot)) <=> target
+    when  0 then break
+    when  1 then high = pivot
+    when -1 then low = pivot
+    end
+
+    pivot = low + ((high-low) / 2)
+  end
+
+  pivot
+end
+
+INPUT = Utils.cli_param_or_default(0,"day14/input.txt")
+rules = parse_file(INPUT)
+
+# part 1
+puts "Part 1: %i" % breakdown(rules, Value.new("FUEL", 1))
+
+# part 2
+TRILLION=1_000_000_000_000
+puts "Part 2: %i" % find_max_fuel_for_ore(rules, TRILLION)
