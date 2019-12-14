@@ -98,12 +98,14 @@ class ArcadeCabinet
   property always_print : Bool
   property draw_buffer : Array(Int64)
   property do_hack : Bool
+  property save_frames : Bool
 
   def initialize(cpu, curses = false)
     @cpu = cpu
     @display = SegmentDisplay.new(45, 26, curses)
     @always_print = false
     @do_hack = false
+    @save_frames = false
     @draw_buffer = [] of Int64
 
     @cpu.debug = false
@@ -132,9 +134,11 @@ class ArcadeCabinet
       @display.set(x, y, id)
       @display.print_display if @always_print
 
-      @frame = @frame ? @frame.try{ |f| f+1 } : 0
-      pixels = @display.to_pixels
-      Utils.write_ppm(@display.width,@display.height, pixels, "frames/frame-%08i.ppm" % @frame)
+      if @save_frames
+        @frame = @frame ? @frame.try{ |f| f+1 } : 0
+        pixels = @display.to_pixels
+        Utils.write_ppm(@display.width,@display.height, pixels, "frames/d13-%08i.ppm" % @frame)
+      end
     end
   end
 
@@ -239,6 +243,7 @@ else
   cab.always_print = false
   cab.set_free_play
   cab.do_hack = true
+  cab.save_frames = ENV["AOC_FRAMES"]? == "on"
   cab.run
   puts "P2: %i" % cab.display.segment
 end

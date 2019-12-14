@@ -6,3 +6,5 @@ tmp
 tmp/*
 frames/*
 *.webm
+*.bmp
+*.gif
