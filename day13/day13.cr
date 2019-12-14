@@ -55,6 +55,24 @@ class SegmentDisplay < Display
     end
   end
 
+  def print_display
+    if !@crt
+      @tiles.flat_map { |row| row }.map_with_index { |tile, i|
+        print "\n" if i % @width == 0
+        print tilemap(tile)
+      }
+      puts ""
+    else
+      @crt.try { |crt|
+        crt.attribute_on colormap(0)
+        crt.attribute_on Crt::Attribute::Bold
+        crt.print(@height - 1, 0, "SCORE: %i" % segment)
+        crt.attribute_off Crt::Attribute::Bold
+        crt.refresh
+      }
+    end
+  end
+
   def colormap(val)
     @colormap[val.to_i32]? || @colormap[-1]
   end

@@ -2,49 +2,54 @@
 require "colorize"
 require "../lib/utils.cr"
 require "../lib/vm2.cr"
+require "../lib/display.cr"
 
 DIRECTIONS = [{0,-1}, {1,0}, {0,1}, {-1,0}]
 
-class Map
-  property tiles : Array(Array(Symbol))
+class MapDisplay < Display
+  property tiles : Array(Array(Int64))
   property width : Int32
   property height : Int32
 
-  def initialize(width, height)
-    @width = width
-    @height = height
-    @tiles = [] of Array(Symbol)
+  def initialize(@width, @height)
+    @tiles = [] of Array(Int64)
     height.times do
-      @tiles << [] of Symbol
-      width.times do
-        @tiles.last << :blank
-      end
+      @tiles << [-1_i64] * width
     end
-  end
-
-  def get(x,y)
-    @tiles[y][x]
-  end
-
-  def set(x,y,val)
-    @tiles[y][x] = val
   end
 
   def count_painted(color=nil)
     @tiles.reduce(0) { |sum, row|
       sum + row.reduce(0) { |rsum, tile|
-        if (color && tile == color) || tile != :blank
+        if (color && tile == color) || tile != -1
           rsum + 1
         else rsum end
       }
     }
+  end
+
+  def rgbmap(val)
+    case val
+    when  1 then {255,255,255}
+    when  0 then {0,0,0}
+    else {10,10,10}
+    end
+  end
+
+  def tilemap(val)
+    case val
+    when -1 then " "
+    when  0 then " "
+    when  1 then "#"
+    else "?"
+    end
   end
 end
 
 
 class Robot
   property cpu : VM2::VM
-  property map : Map
+  property map : MapDisplay
 
   property x : Int32
   property y : Int32
@@ -54,12 +59,14 @@ class Robot
   property paint_count : Int32
 
   property state : Symbol
+  property print_frames : Bool
 
   def initialize(map, program)
     @x, @y = 0,0
     @facing = 0
     @state = :wait_for_paint
     @paint_count = 0
+    @print_frames = false
 
     @map = map
 
@@ -77,19 +84,7 @@ class Robot
   def read_camera : Int64
     input = map.get(x,y)
 
-    if Utils.enable_debug_output?
-      puts "robot #{@state} sees #{input} @ #{x},#{y}"
-      puts
-      print_map_robot(map, self)
-      puts
-    end
-
-    case input
-    when :white then 1_i64
-    when :black then 0_i64
-    when :blank then 0_i64
-    else raise "can't send input: #{input}"
-    end
+    input < 0 ? 0_i64 : input
   end
 
   def do_action(a : Int64) : Nil
@@ -106,12 +101,13 @@ class Robot
       @state = :wait_for_paint
     when :wait_for_paint
       log "  do paint #{a}"
-      case a
-      when 0 then map.set(x,y,:black)
-      when 1 then map.set(x,y,:white)
-      else raise "robot can't handle paint output #{a}"
-      end
+      map.set(x,y,a)
       @paint_count += 1
+      if @print_frames
+        @frame = @frame ? @frame.try{ |f| f+1 } : 0
+        pixels = @map.to_pixels
+        Utils.write_ppm(@map.width, @map.height, pixels, "frames/d11-%08i.ppm" % @frame)
+      end
       @state = :wait_for_move
     end
   end
@@ -120,57 +116,6 @@ class Robot
     log "robot run"
     cpu.run
     log "robot stop"
-  end
-end
-
-def vm_map_pixels(vm, map) : Tuple(Array(Tuple(Int32,Int32,Int32)), Int32, Int32)
-  val_colors = [{0,0,0}, {100,100,100},
-                {0,0,100}, {0,100,0},
-                {100,0,0}, {0,100,100},
-                {100,200,0}]
-  vm_pixels = vm.mem.map_with_index do |v,i|
-    if i == vm.pc
-      {255,255,255}
-    elsif i == vm.rel_base
-      {255,255,0}
-    else
-      val_colors[v % val_colors.size]
-    end
-  end
-
-  map_pixels = map.tiles.flat_map { |row| row }.map { |tile|
-    case tile
-    when :blank then {50,50,50}
-    when :black then {0,0,0}
-    when :white then {200,200,200}
-    else {255,0,0}
-    end
-  }
-
-  vm_padding = vm_pixels.size % map.width
-  vm_pixels.concat ([{0,0,0}] * vm_padding)
-
-  pixels = vm_pixels.concat map_pixels
-
-  lines = pixels.size // map.width
-  {pixels, map.width, lines}
-end
-
-def print_map_robot(map, robot)
-  map.tiles.each_with_index do |row,y|
-    row.each_with_index do |tile,x|
-      if robot.x == x && robot.y == y
-        print "@@"
-      else
-        case tile
-        when :blank then print "  ".colorize.back(:black)
-        when :black then print "  ".colorize.back(:black)
-        when :white then print "##".colorize.back(:white)
-        else print "??".colorize.back(:red)
-        end
-      end
-    end
-    print "\n"
   end
 end
 
@@ -185,11 +130,12 @@ INPUT = Utils.get_input_file(Utils.cli_param_or_default(0, "day11/input.txt"))
 
 # part 1
 width,height = 200,200
-map = Map.new(width,height) # big enough I guess
+map = MapDisplay.new(width,height) # big enough I guess
 robot = Robot.new(map, INPUT)
 robot.x = width//2
 robot.y = height//2
 
+#robot.print_frames = true
 robot.run
 
 #print_map_robot(map, robot)
@@ -205,23 +151,18 @@ puts "Part 1: %i" % map.count_painted
 
 # part 2
 width,height = 50,10
-map = Map.new(width,height)
+map = MapDisplay.new(width,height)
 robot = Robot.new(map, INPUT)
 robot.x = 2
 robot.y = 2
 
-map.set(robot.x,robot.y, :white)
-
-robot.cpu.exec_hook_fn = ->(vm: VM2::VM) {
-  pixels, width, height = vm_map_pixels(vm, map)
-  Utils.write_ppm(width, height, pixels, "frames/p2-%08i.ppm" % vm.cycles)
-}
+map.set(robot.x,robot.y, 1)
 
 robot.run
 
 puts "Robot stopped at: #{robot.x}, #{robot.y}"
 puts "Part 2"
-print_map_robot(map, robot)
+map.print_display
 
 pixels = map.tiles.flatten.map { |tile| case tile
                                         when :black then {0,0,0}

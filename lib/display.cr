@@ -22,18 +22,13 @@ abstract class Display
     @tiles[y][x]
   end
 
-  def set(x, y, val)
-    if x < 0
-      # segment display
-      @segment = val
-    else
-      @tiles[y][x] = val
-      @crt.try { |crt|
-        crt.attribute_on colormap(val)
-        crt.print(y.to_i32, x.to_i32, tilemap(val))
-        crt.refresh
-      }
-    end
+  def set(x, y, val : Int64)
+    @tiles[y][x] = val
+    @crt.try { |crt|
+      crt.attribute_on colormap(val)
+      crt.print(y.to_i32, x.to_i32, tilemap(val))
+      crt.refresh
+    }
   end
 
   def count_painted(color = nil)
@@ -47,21 +42,10 @@ abstract class Display
   end
 
   def print_display
-    if !@crt
-      @tiles.flat_map { |row| row }.map_with_index { |tile, i|
-        print "\n" if i % @width == 0
-        print tilemap(tile)
-      }
-      puts "\nSCORE: %i" % @segment
-    else
-      @crt.try { |crt|
-        crt.attribute_on colormap(0)
-        crt.attribute_on Crt::Attribute::Bold
-        crt.print(@height - 1, 0, "SCORE: %i" % segment)
-        crt.attribute_off Crt::Attribute::Bold
-        crt.refresh
-      }
-    end
+    @tiles.flat_map { |row| row }.map_with_index { |tile, i|
+      print "\n" if i % @width == 0
+      print tilemap(tile)
+    }
   end
 
   def to_pixels
@@ -80,7 +64,9 @@ abstract class Display
 
   # Return the color for a given value (in whatever format needed by the
   # terminal library in use)
-  abstract def colormap(v)
+  def colormap(v)
+    Crt::Attribute::Normal
+  end
 
   # Return the printable character for a given value
   abstract def tilemap(v)

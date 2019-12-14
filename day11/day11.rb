@@ -111,9 +111,9 @@ class Robot
     end
 
     case input
-    when :white then 1
-    when :black then 0
-    when :blank then 0
+    when  1 then 1
+    when  0 then 0
+    when -1 then 0
     else raise "can't send input: #{input}"
     end
   end
