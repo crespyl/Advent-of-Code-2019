@@ -68,22 +68,43 @@ def reqs_for_value(rules, value)
   [reqs, excess]
 end
 
-# breakdown a value into the amount of ore necessary to produce it
+# Breakdown a value into the amount of ore necessary to produce it
+#
+# The basic idea is to walk the provided ORE => FUEL formula backwards. For any
+# given value with rule (m X => n Y) we do the following:
+#
+#  given (n Y) in our working set,
+#  note that we have PRODUCED (n Y),
+#  remove (n Y) from the working set,
+#  state that we must have CONSUMED (m X),
+#  add (m X) to the working set
+#
+# the difference between the amount PRODUCED and CONSUMED for any given resource
+# is considered available, and can be used to reduce the requirements for the
+# next rule that needs them.
 def breakdown(rules, value)
   values = [value]
 
   produced = Hash.new(0)
   consumed = Hash.new(0)
 
+  # Keep iterating over our list of available values, until all that's left is ORE
   while ! values.empty? && ! values.all? { |v| v.resource == "ORE" }
-    values = collapse_values(values)
+    values = collapse_values(values) # make sure we fold the list down and don't
+                                     # have two or more clumps of the same
+                                     # resource at once
+
+    # select one value to examine and get is requirements, along with any excess
+    # that will be produced
     needed = values.shift
     reqs, extra = reqs_for_value(rules, needed)
 
     reqs.each do |req|
+      # for each requirement
       available = produced[req.resource] - consumed[req.resource]
       if produced[req.resource] > 0 && produced[req.resource] >= consumed[req.resource]
-
+        # if we have some spares available, modify the required amount and note
+        # the consumption
         if available >= req.amount
           consumed[req.resource] += req.amount
           req.amount = 0
@@ -93,15 +114,22 @@ def breakdown(rules, value)
         end
       end
 
+      # having updated the required amount to account for any already available,
+      # we note the consumption
       consumed[req.resource] += req.amount
     end
 
+    # now that we processed all the requirements, we can state that we produced
+    # some amount
     produced[needed.resource] += needed.amount + extra
 
+    # and we add the requirements to our working set so that we can keep
+    # following the chain
     values += reqs
   end
 
-  return consumed["ORE"]
+  # lastly we just pull out the amount of ore we consumed during the process
+  consumed["ORE"]
 end
 
 def find_max_fuel_for_ore(rules, ore)
@@ -109,7 +137,7 @@ def find_max_fuel_for_ore(rules, ore)
   pivot = low + ((high-low) / 2)
 
   while (pivot != high && pivot != low)
-    case breakdown(rules, Value.new("FUEL", pivot)) <=> target
+    case breakdown(rules, Value.new("FUEL", pivot)) <=> ore
     when  0 then break
     when  1 then high = pivot
     when -1 then low = pivot
