@@ -87,7 +87,7 @@ module Display
       property offset_x : Int32
       property offset_y : Int32
 
-      def initialize(width, height, curses = false, default=0)
+      def initialize(width : Int32, height : Int32, curses = false, default=0)
         @width, @height = width, height
         @offset_x, @offset_y = 0, 0
         @map = Hash(Tuple(Int32,Int32), Int64).new(default.to_i64)

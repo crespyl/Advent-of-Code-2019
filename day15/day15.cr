@@ -10,6 +10,7 @@ class MapDisplay < Display::MapDisplay
     when 1 then "."
     when 2 then "@"
     when 3 then ">"
+    when 4 then "O"
     when 9 then "#"
     else        " "
     end
@@ -21,6 +22,7 @@ class MapDisplay < Display::MapDisplay
     when  1 then {Termbox::COLOR_WHITE, Termbox::COLOR_DEFAULT}
     when  2 then {Termbox::COLOR_CYAN | Termbox::ATTR_BOLD, Termbox::COLOR_DEFAULT}
     when  3 then {Termbox::COLOR_GREEN, Termbox::COLOR_DEFAULT}
+    when  4 then {Termbox::COLOR_BLUE | Termbox::ATTR_BOLD, Termbox::COLOR_DEFAULT}
     when  9 then {Termbox::COLOR_WHITE, Termbox::COLOR_BLACK}
     when 10 then {Termbox::COLOR_BLACK, Termbox::COLOR_DEFAULT}
     else         {Termbox::COLOR_WHITE, Termbox::COLOR_RED}
@@ -32,6 +34,7 @@ class MapDisplay < Display::MapDisplay
     when 1 then {25, 25, 25}
     when 2 then {0, 0, 255}
     when 3 then {0, 255, 0}
+    when 4 then {41, 139, 132}
     when 9 then {139, 50, 23}
     else        {0, 0, 0}
     end
@@ -70,7 +73,7 @@ class Droid
     @start_pos = {@x, @y}
 
     if curses
-      @map = MapDisplay.new(80, 30, curses, 10)
+      @map = MapDisplay.new(100, 50, curses, 10)
     else
       @map = MapDisplay.new(42, 42, curses, 10)
     end
@@ -163,7 +166,7 @@ class Droid
       min_x, max_x = 3, @map.width - 3
       min_y, max_y = 3, @map.height - 3
 
-      ev = w.peek(10)
+      ev = w.peek(5)
       if ev.ch.chr == 'q'
         return :stop
       elsif ev.ch.chr == 'c' || (sx < min_x || sx > max_x) || (sy < min_y || sy > max_y)
@@ -217,9 +220,11 @@ curses = ARGV[0]? == "play"
 droid = Droid.new(VM2.from_string(prog), curses)
 droid.run
 
+map = droid.map
+
 if curses
-  droid.map.print_display
-  droid.map.window.try { |w|
+  map.print_display
+  map.window.try { |w|
     colors = droid.map.colormap(1)
     w.set_primary_colors(Termbox::COLOR_WHITE, Termbox::COLOR_BLUE)
     w.write_string(Termbox::Position.new(1, 1),
@@ -227,14 +232,12 @@ if curses
                    Termbox::COLOR_WHITE, Termbox::COLOR_BLUE)
     w.render
     w.poll
-    w.shutdown
   }
 end
 
-pixels = droid.map.to_pixels
-Utils.write_ppm(droid.map.width, droid.map.height, pixels, "day15/map.ppm")
+pixels = map.to_pixels
+Utils.write_ppm(map.width, map.height, pixels, "day15/map.ppm")
 
-map = droid.map
 
 # Use A* to map from droid.start_pos to droid.station
 
@@ -252,6 +255,7 @@ def neighbors(loc) : Array(Pos)
   [{x - 1, y}, {x + 1, y}, {x, y + 1}, {x, y - 1}]
 end
 
+# P1
 # puts "Start search..."
 
 while !open.empty?
@@ -276,8 +280,35 @@ while !open.empty?
   open = open.sort_by { |_, _, cost| cost }
 end
 
-puts "P1: %i" % (solution.size - 1)
+if curses
+  map.set(droid.x,droid.y,1)
+  map[droid.start_pos] = 2
+  solution.shift
+  solution.each do |loc|
+    map[loc] = 3
+    map.print_display
 
+    map.window.try { |w|
+      ev = w.peek(30)
+      if ev.ch.chr == 'q'
+        break
+      elsif ev.ch.chr == 'c'
+        map.set_offset(-21,-21)
+      end
+    }
+  end
+
+  map.window.try { |w|
+    w.set_primary_colors(Termbox::COLOR_WHITE, Termbox::COLOR_GREEN)
+    w.write_string(Termbox::Position.new(1, 1),
+                   "Done, press any key                     ",
+                   Termbox::COLOR_BLUE, Termbox::COLOR_DEFAULT)
+    w.poll
+  }
+end
+
+
+# P2
 # Flood fill from station, count the steps
 
 open = [station]
@@ -289,6 +320,7 @@ while !open.empty?
   open.each do |loc|
     next if visited.includes? loc
     visited.add(loc)
+    map[loc] = 4
     neighbors(loc).each do |neighbor|
       frontier << neighbor if map[neighbor] < 9
     end
@@ -296,6 +328,30 @@ while !open.empty?
 
   open = frontier
   steps += 1
+
+  if curses
+    map.print_display
+    map.window.try { |w|
+      ev = w.peek(15)
+      if ev.ch.chr == 'q'
+        break
+      elsif ev.ch.chr == 'c'
+        map.set_offset(-21,-21)
+      end
+    }
+  end
 end
 
+if curses
+  map.window.try { |w|
+    w.set_primary_colors(Termbox::COLOR_WHITE, Termbox::COLOR_BLUE)
+    w.write_string(Termbox::Position.new(1, 1),
+                   "Done, press any key                     ",
+                   Termbox::COLOR_BLUE, Termbox::COLOR_DEFAULT)
+    w.poll
+    w.shutdown
+  }
+end
+
+puts "P1: %i" % (solution.size - 1)
 puts "P2: %i" % (steps - 2) # account for initial expand and final check
