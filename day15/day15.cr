@@ -15,6 +15,7 @@ class MapDisplay < Display
   WALL = 6
   DROID = 7
   STATION = 8
+  OXYGEN = 10
 
   property segment : Int64
 
@@ -38,6 +39,7 @@ class MapDisplay < Display
        WALL => "#",
        DROID => "@",
        STATION => "+",
+       OXYGEN => "O",
       -1 => "?",
     }
 
@@ -150,7 +152,7 @@ class Droid
     @state = :ok
     @facing = 4
     @station = {-1,-1}
-    @map = {} of Tuple(Int32, Int32) => Int32
+    @map = Hash(Tuple(Int32, Int32), Int32).new { |h,k| h[k] = 9 }
     @start_pos = {@x,@y}
 
     @min_pos = {@x,@y}
@@ -250,18 +252,19 @@ class Droid
     case res
     when 1
       @display.set(@x,@y, MapDisplay::FLOOR)
-      @map[{@x,@y}] = 0
+      @map[{@x,@y}] = 1
       @x, @y = nx, ny
       @display.set(@x,@y, @facing)
       @move_count += 1
       :ok
     when 0
       @display.set(nx,ny, MapDisplay::WALL)
-      @map[{nx,ny}] = 1
+      @map[{nx,ny}] = 9
       :wall
     when 2
-      @map[{nx,ny}] = 9
+      @map[{nx,ny}] = 0
       @display.set(nx,ny, MapDisplay::STATION)
+      @station = {nx,ny}
       @x, @y = nx, ny
       :station
     else raise "got bad output form cpu"
@@ -311,20 +314,20 @@ class Droid
         case check_dir(d)
         when :ok
           @display.set(lx,ly, MapDisplay::FLOOR)
-          @map[{lx,ly}] = 0
+          @map[{lx,ly}] = 1
           mode == :left ? turn_left : turn_right
         when :wall # go forward
           @display.set(lx,ly, MapDisplay::WALL)
-          @map[{lx,ly}] = 1
+          @map[{lx,ly}] = 9
         when :station # end
           log "station!"
-          @map[{lx,ly}] = 9
+          @map[{lx,ly}] = 0
           @display.set(lx,ly, MapDisplay::STATION)
         end
       end
 
-      @display.set(-1,0, @move_count)
-      @display.print_display
+      # @display.set(-1,0, @move_count)
+      # @display.print_display
 
       # check min/max
       min_x, min_y = @min_pos
@@ -344,7 +347,8 @@ class Droid
         if @display.crt
           @display.crt.try { |crt| ch = crt.getch.chr }
         else
-          ch = Readline.readline("> ", true).try { |l| l.chars.first }
+          #ch = Readline.readline("> ", true).try { |l| l.chars.first }
+          ch = 'S'
         end
 
         case ch
@@ -362,32 +366,123 @@ class Droid
         skip -= 1
       end
 
+      break if @move_count > 3000
+
     end
   end
 end
 
+# Extract map
 prog = Utils.get_input_file(Utils.cli_param_or_default(0, "day15/input.txt"))
-# p1
-Crt.init
-Crt.start_color
-Crt.raw
 
-crt = true
+# Crt.init
+# Crt.start_color
+# Crt.raw
+
+crt = false
 droid = Droid.new(VM2.from_string(prog), crt)
 droid.display.set(droid.x,droid.y, droid.facing)
 
 droid.run
 
-Crt.done
+# Crt.done
 
 droid.display.print_display
 
-puts droid.min_pos
-puts droid.max_pos
-puts droid.move_count
-puts droid.start_pos
-puts "\r\n"
-puts droid.map
-puts "\r\n"
+puts "start: ", droid.start_pos
+puts "station: ", droid.station
+puts "min: ", droid.min_pos
+puts "max: ", droid.max_pos
+puts "moves: ", droid.move_count
 
-# 280 too high
+# Use A* to map from droid.start_pos to droid.station
+
+alias Pos = Tuple(Int32, Int32)
+alias Route = Array(Pos)
+
+map = droid.map
+start = droid.start_pos
+station = droid.station
+solution = [] of Pos
+
+visited = Set(Pos).new
+open = [{start, [] of Pos, 1}]
+
+def dist(a,b)
+  Math.sqrt( (a[0]-b[0])*(a[0]-b[0]) + ((a[1]-b[1])*(a[1]-b[1])) )
+end
+
+def neighbors(loc) : Array(Pos)
+  x,y = loc
+  [{x-1,y}, {x+1,y}, {x,y+1}, {x, y-1}]
+end
+
+puts "Start search..."
+
+cycles = 0
+while !open.empty?
+  cycles += 1
+
+  if cycles % 1000 == 0
+    puts "cycle #{cycles}; open set: #{open.size}"
+  end
+
+  loc, route, cost = open.pop
+  next if visited.includes? loc
+
+  new_route = [route, loc].flatten
+  if loc == station
+    solution = new_route.flatten
+    break
+  end
+
+  visited.add(loc)
+
+  neighbors(loc).each do |neighbor|
+    next if map[neighbor]? == 9 || visited.includes? neighbor
+    tile_cost = map[neighbor]? || 99
+    new_cost = cost + tile_cost
+    open << {neighbor, new_route, new_cost}
+  end
+
+  open = open.sort_by { |_,_,cost| cost }
+
+end
+
+puts "P1: %i" % (solution.size-1)
+
+# Flood fill from station, count the steps
+
+open = [station]
+visited = Set(Pos).new
+steps = 0
+
+while !open.empty?
+
+  frontier = [] of Pos
+
+  open.each do |loc|
+    next if visited.includes? loc
+
+    droid.display.set(loc[0],loc[1],MapDisplay::OXYGEN)
+
+    visited.add(loc)
+
+    neighbors(loc).each do |neighbor|
+      frontier << neighbor if map[neighbor] == 1
+    end
+  end
+
+  open = frontier
+  break if open.empty?
+
+  if steps % 100 == 0 && Utils.enable_debug_output?
+    droid.display.print_display
+    puts "step #{steps}; open set: #{open.size}"
+  end
+
+  steps += 1
+end
+
+
+puts "P2: %i" % (steps-1) # -1 for the initial expand
