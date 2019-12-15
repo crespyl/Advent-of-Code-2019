@@ -14,6 +14,16 @@ class MapDisplay < Display::MapDisplay
     else " "
     end
   end
+
+  def rgbmap(val)
+    case val
+    when 1 then {25,25,25}
+    when 2 then {0,0,255}
+    when 3 then {0,255,0}
+    when 9 then {139, 50, 23}
+    else {0,0,0}
+    end
+  end
 end
 
 class Droid
@@ -165,11 +175,12 @@ prog = Utils.get_input_file(Utils.cli_param_or_default(0, "day15/input.txt"))
 droid = Droid.new(VM2.from_string(prog))
 droid.run
 
-
-
 droid.map[droid.start_pos] = 2
 droid.map[droid.station] = 3
 droid.map.print_display
+
+pixels = droid.map.to_pixels
+Utils.write_ppm(droid.map.width,droid.map.height, pixels, "day15/map.ppm")
 
 map = droid.map
 
