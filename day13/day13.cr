@@ -224,8 +224,10 @@ if ARGV[0]? == "play"
     w.write_string(Termbox::Position.new(3, cab.display.height//3), "Game Over, press any key to continue")
     w.render
     w.poll
-    w.shutdown
   }
+
+  cab.display.shutdown_curses
+  cab.display.print_display
 
   puts "Game Over\nFinal Score: %i" % cab.display.segment
 else
