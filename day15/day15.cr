@@ -4,20 +4,18 @@ require "../lib/vm2.cr"
 
 class Droid
   property cpu : VM2::VM
+
   property x : Int32
   property y : Int32
-  property station : Tuple(Int32, Int32)
-
-  property move_count : Int32
   property facing : Int64
 
-  property min_pos : Tuple(Int32,Int32)
-  property max_pos : Tuple(Int32,Int32)
+  property move_count : Int32
   property start_pos : Tuple(Int32,Int32)
+  property station : Tuple(Int32, Int32)
 
   property map : Hash(Tuple(Int32, Int32), Int32)
 
-  @@DIRS = {
+  DIRS = {
     0 => { 0, 0},
     1 => { 0,-1},
     2 => { 0, 1},
@@ -35,16 +33,10 @@ class Droid
     @station = {-1,-1}
     @map = Hash(Tuple(Int32, Int32), Int32).new { |h,k| h[k] = 9 }
     @start_pos = {@x,@y}
-
-    @min_pos = {@x,@y}
-    @max_pos = {@x,@y}
-
-    @cpu.debug = false
-
   end
 
   def coords_facing(dir)
-    d = @@DIRS[dir]
+    d = DIRS[dir]
     {@x+d[0],@y+d[1]}
   end
 
@@ -183,14 +175,7 @@ end
 
 #puts "Start search..."
 
-cycles = 0
 while !open.empty?
-  cycles += 1
-
-  if cycles % 1000 == 0
-    puts "cycle #{cycles}; open set: #{open.size}"
-  end
-
   loc, route, cost = open.pop
   next if visited.includes? loc
 
@@ -210,7 +195,6 @@ while !open.empty?
   end
 
   open = open.sort_by { |_,_,cost| cost }
-
 end
 
 puts "P1: %i" % (solution.size-1)
@@ -222,23 +206,17 @@ visited = Set(Pos).new
 steps = 0
 
 while !open.empty?
-
   frontier = [] of Pos
-
   open.each do |loc|
     next if visited.includes? loc
-
     visited.add(loc)
-
     neighbors(loc).each do |neighbor|
       frontier << neighbor if map[neighbor] == 1
     end
   end
 
   open = frontier
-  break if open.empty?
-
   steps += 1
 end
 
-puts "P2: %i" % (steps-1) # -1 for the initial expand
+puts "P2: %i" % (steps-2) # account for initial expand and final check
