@@ -64,6 +64,9 @@ class MapDisplay < Display
       # segment display
       @segment = val.to_i64
     else
+      if val == WALL && @tiles[y][x] != 0 && @tiles[y][x] != val
+        raise "TRIED TO PUT A WALL ON SOMETHING THAT SHOULDN'T BE A WALL"
+      end
       @tiles[y][x] = val.to_i64
       @crt.try { |crt|
         #crt.attribute_on colormap(val)
@@ -123,6 +126,12 @@ class Droid
   property state : Symbol
   property facing : Int64
 
+  property min_pos : Tuple(Int32,Int32)
+  property max_pos : Tuple(Int32,Int32)
+  property start_pos : Tuple(Int32,Int32)
+
+  property map : Hash(Tuple(Int32, Int32), Int32)
+
   @@DIRS = {
     0 => { 0, 0},
     1 => { 0,-1},
@@ -133,7 +142,7 @@ class Droid
 
   def initialize(cpu, curses = false)
     @cpu = cpu
-    @display = MapDisplay.new(229, 61, curses)
+    @display = MapDisplay.new(110, 40, curses)
     @x, @y = @display.width//2, @display.height//2
     @last_move = 0
     @move_count = 0
@@ -141,6 +150,11 @@ class Droid
     @state = :ok
     @facing = 4
     @station = {-1,-1}
+    @map = {} of Tuple(Int32, Int32) => Int32
+    @start_pos = {@x,@y}
+
+    @min_pos = {@x,@y}
+    @max_pos = {@x,@y}
 
     @cpu.debug = false
 
@@ -236,15 +250,19 @@ class Droid
     case res
     when 1
       @display.set(@x,@y, MapDisplay::FLOOR)
+      @map[{@x,@y}] = 0
       @x, @y = nx, ny
       @display.set(@x,@y, @facing)
       @move_count += 1
       :ok
     when 0
       @display.set(nx,ny, MapDisplay::WALL)
+      @map[{nx,ny}] = 1
       :wall
     when 2
+      @map[{nx,ny}] = 9
       @display.set(nx,ny, MapDisplay::STATION)
+      @x, @y = nx, ny
       :station
     else raise "got bad output form cpu"
     end
@@ -264,6 +282,7 @@ class Droid
 
   def run
     state = :look
+    mode = :left
     skip = 0
 
     while true
@@ -278,30 +297,47 @@ class Droid
           log "moved forward"
         when :wall
           log "hit wall", 2
-          turn_left
+          mode == :left ? turn_right : turn_left
         when :station
           log "reached station after #{@move_count} moves", -1
-          break
+          #break
           @display.set(nx,ny, MapDisplay::STATION)
         end
       when :look
         log "(look)", 1
         state = :move
-        lx,ly = coords_facing(right_from(@facing))
-        case check_dir(right_from(@facing))
+        lx,ly = mode == :left ? coords_facing(left_from(@facing)) : coords_facing(right_from(@facing))
+        d = mode == :left ? left_from(@facing) : right_from(@facing)
+        case check_dir(d)
         when :ok
           @display.set(lx,ly, MapDisplay::FLOOR)
-          turn_right
+          @map[{lx,ly}] = 0
+          mode == :left ? turn_left : turn_right
         when :wall # go forward
           @display.set(lx,ly, MapDisplay::WALL)
+          @map[{lx,ly}] = 1
         when :station # end
-          log "station left!"
+          log "station!"
+          @map[{lx,ly}] = 9
           @display.set(lx,ly, MapDisplay::STATION)
         end
       end
 
       @display.set(-1,0, @move_count)
       @display.print_display
+
+      # check min/max
+      min_x, min_y = @min_pos
+      max_x, max_y = @max_pos
+
+      min_x = @x if @x < min_x
+      max_x = @x if @x > max_x
+
+      min_y = @y if @y < min_y
+      max_y = @y if @y > max_y
+
+      @min_pos = {min_x,min_y}
+      @max_pos = {max_x,max_y}
 
       if skip == 0
         ch = 'q'
@@ -315,6 +351,9 @@ class Droid
         when nil, 'q' then break
         when 's' then skip=10
         when 'S' then skip=100
+        when 't' then mode = mode == :left ? :right : :left
+        when '?'
+          log "query: #{[@x,@y].join(',')}: #{@facing}; #{mode}"
         end
         if ch.nil? || ch == 'q'
           break
@@ -343,7 +382,12 @@ Crt.done
 
 droid.display.print_display
 
+puts droid.min_pos
+puts droid.max_pos
 puts droid.move_count
-puts droid.last_move
+puts droid.start_pos
+puts "\r\n"
+puts droid.map
+puts "\r\n"
 
-# 281 too high
+# 280 too high

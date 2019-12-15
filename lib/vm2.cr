@@ -37,6 +37,10 @@ module VM2
       @status = :ok if @status == :needs_input
     end
 
+    def send_input(val : Int32)
+      send_input(val.to_i64)
+    end
+
     def read_output
       @output.shift?
     end

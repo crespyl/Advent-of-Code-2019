@@ -22,6 +22,10 @@ abstract class Display
     @tiles[y][x]
   end
 
+  def set(x, y, val : Int32)
+    set(x,y,val.to_i64)
+  end
+
   def set(x, y, val : Int64)
     @tiles[y][x] = val
     @crt.try { |crt|
