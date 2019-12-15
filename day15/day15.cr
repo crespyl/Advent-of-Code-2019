@@ -15,6 +15,18 @@ class MapDisplay < Display::MapDisplay
     end
   end
 
+  def colormap(val)
+    case val
+    when 0 then {Termbox::COLOR_DEFAULT, Termbox::COLOR_DEFAULT}
+    when 1 then {Termbox::COLOR_WHITE, Termbox::COLOR_DEFAULT}
+    when 2 then {Termbox::COLOR_CYAN | Termbox::ATTR_BOLD, Termbox::COLOR_DEFAULT}
+    when 3 then {Termbox::COLOR_GREEN, Termbox::COLOR_DEFAULT}
+    when 9 then {Termbox::COLOR_WHITE, Termbox::COLOR_BLACK}
+    when 10 then {Termbox::COLOR_BLACK, Termbox::COLOR_DEFAULT}
+    else {Termbox::COLOR_WHITE, Termbox::COLOR_RED}
+    end
+  end
+
   def rgbmap(val)
     case val
     when 1 then {25,25,25}
@@ -55,9 +67,14 @@ class Droid
     @state = :ok
     @facing = 4
     @station = {-1,-1}
-    @map = MapDisplay.new(42,42,curses,9)
-    @map.set_offset(@map.width//-2,@map.height//-2)
     @start_pos = {@x,@y}
+
+    if curses
+      @map = MapDisplay.new(80,30,curses,10)
+    else
+      @map = MapDisplay.new(42,42,curses,10)
+    end
+    @map.set_offset(@map.width//-2,@map.height//-2)
   end
 
   def coords_facing(dir)
@@ -111,15 +128,16 @@ class Droid
     res = @cpu.read_output
     case res
     when 1
-      @map[{@x,@y}] = 1
+      @map[{@x,@y}] = 1 unless map[{@x,@y}] == 3
       @x, @y = nx, ny
+      @map[{@x,@y}] = 2
       @move_count += 1
       :ok
     when 0
       @map[{nx,ny}] = 9
       :wall
     when 2
-      @map[{nx,ny}] = 0
+      @map[{nx,ny}] = 3
       @station = {nx,ny}
       @x, @y = nx, ny
       :station
@@ -135,9 +153,29 @@ class Droid
     @facing = right_from(@facing)
   end
 
+  def update_curses
+    @map.window.try { |w|
+      @map.print_display
+
+      sx,sy = @x-@map.offset_x, @y-@map.offset_y
+      cx,cy = @map.width//2, @map.height//2
+
+      min_x,max_x = 3, @map.width-3
+      min_y,max_y = 3, @map.height-3
+
+      ev = w.peek(10)
+      if ev.ch.chr == 'q'
+        return :stop
+      elsif ev.ch.chr == 'c' || (sx < min_x || sx > max_x) || (sy < min_y || sy > max_y)
+        @map.set_offset(@x-cx,@y-cy)
+      end
+    }
+  end
+
   def run
     state = :look
-    while true
+    go = true
+    while go
       case state
       when :move
         state = :look
@@ -164,6 +202,8 @@ class Droid
         end
       end
 
+      break if update_curses == :stop
+
       # 3k should be enough to map anything
       break if @move_count > 3000
     end
@@ -171,13 +211,22 @@ class Droid
 end
 
 # Extract map
-prog = Utils.get_input_file(Utils.cli_param_or_default(0, "day15/input.txt"))
-droid = Droid.new(VM2.from_string(prog))
+prog = Utils.get_input_file("day15/input.txt")
+
+curses = ARGV[0]? == "play"
+droid = Droid.new(VM2.from_string(prog), curses)
 droid.run
 
-droid.map[droid.start_pos] = 2
-droid.map[droid.station] = 3
-droid.map.print_display
+if curses
+  droid.map.print_display
+  droid.map.window.try { |w|
+    colors = droid.map.colormap(1)
+    w.set_primary_colors(Termbox::COLOR_WHITE, Termbox::COLOR_BLACK)
+    w.write_string(Termbox::Position.new(5,5), "Map Complete")
+    w.poll
+    w.shutdown
+  }
+end
 
 pixels = droid.map.to_pixels
 Utils.write_ppm(droid.map.width,droid.map.height, pixels, "day15/map.ppm")
@@ -215,7 +264,7 @@ while !open.empty?
   visited.add(loc)
 
   neighbors(loc).each do |neighbor|
-    next if map[neighbor]? == 9 || visited.includes? neighbor
+    next if map[neighbor]? == 9 || map[neighbor]? == 10 || visited.includes? neighbor
     tile_cost = map[neighbor]? || 99
     new_cost = cost + tile_cost
     open << {neighbor, new_route, new_cost}
@@ -238,7 +287,7 @@ while !open.empty?
     next if visited.includes? loc
     visited.add(loc)
     neighbors(loc).each do |neighbor|
-      frontier << neighbor if map[neighbor] == 1
+      frontier << neighbor if map[neighbor] < 9
     end
   end
 

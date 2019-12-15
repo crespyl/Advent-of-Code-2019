@@ -1,5 +1,5 @@
 #!/usr/bin/env crystal
-require "crt"
+require "termbox"
 require "readline"
 require "../lib/utils.cr"
 require "../lib/vm2.cr"
@@ -11,13 +11,14 @@ class SegmentDisplay < Display::Display
   def initialize(@width, @height, curses = false)
     @width = width
     @height = height
-    @tiles = [[0_i64] * width] * height
+    @tiles = [] of Array(Int64)
+    height.times { @tiles << [0_i64] * width }
 
-    @crt = Crt::Window.new(height, width) if curses
+    @window = Termbox::Window.new if curses
 
     @segment = 0
 
-    @colormap = {} of Int32 => Crt::ColorPair
+    @colormap = {} of Int32 => Tuple(Int32, Int32)
     @tilemap = {
        0 => " ",
        1 => "#",
@@ -29,13 +30,18 @@ class SegmentDisplay < Display::Display
 
     if curses
       @colormap = {
-         0 => Crt::ColorPair.new(Crt::Color::Default, Crt::Color::Default),
-         1 => Crt::ColorPair.new(Crt::Color::White, Crt::Color::White),
-         2 => Crt::ColorPair.new(Crt::Color::Cyan, Crt::Color::Cyan),
-         3 => Crt::ColorPair.new(Crt::Color::Green, Crt::Color::Default),
-         4 => Crt::ColorPair.new(Crt::Color::Blue, Crt::Color::Default),
-         5 => Crt::ColorPair.new(Crt::Color::White, Crt::Color::Blue),
-        -1 => Crt::ColorPair.new(Crt::Color::White, Crt::Color::Red),
+         0 => {Termbox::COLOR_DEFAULT, Termbox::COLOR_DEFAULT},
+         1 => {Termbox::COLOR_WHITE, Termbox::COLOR_WHITE},
+         2 => {Termbox::COLOR_CYAN, Termbox::COLOR_CYAN},
+         3 => {Termbox::COLOR_GREEN, Termbox::COLOR_DEFAULT},
+         4 => {Termbox::COLOR_BLUE, Termbox::COLOR_DEFAULT},
+         5 => {Termbox::COLOR_WHITE, Termbox::COLOR_BLUE},
+        -1 => {Termbox::COLOR_WHITE, Termbox::COLOR_RED}
+      }
+
+      @window.try { |w|
+        w.set_input_mode(Termbox::INPUT_ESC)
+        w.clear
       }
     end
   end
@@ -46,28 +52,26 @@ class SegmentDisplay < Display::Display
       @segment = val
     else
       @tiles[y][x] = val
-      @crt.try { |crt|
-        crt.attribute_on colormap(val)
-        crt.print(y.to_i32, x.to_i32, tilemap(val))
-        crt.refresh
+      @window.try { |window|
+        colors = colormap(val)
+        window.write_string(Termbox::Position.new(x.to_i32, y.to_i32), tilemap(val), colors[0], colors[1])
+        window.render
       }
     end
   end
 
   def print_display
-    if !@crt
+    if !@window
       @tiles.flat_map { |row| row }.map_with_index { |tile, i|
         print "\n" if i % @width == 0
         print tilemap(tile)
       }
       puts ""
     else
-      @crt.try { |crt|
-        crt.attribute_on colormap(0)
-        crt.attribute_on Crt::Attribute::Bold
-        crt.print(@height - 1, 0, "SCORE: %i" % segment)
-        crt.attribute_off Crt::Attribute::Bold
-        crt.refresh
+      @window.try { |window|
+        colors = colormap(0)
+        window.write_string(Termbox::Position.new(0, @height-1), "SCORE: %i" % segment, colors[0], colors[1])
+        window.render
       }
     end
   end
@@ -167,30 +171,26 @@ class ArcadeCabinet
   def get_curses_input
     return autopilot if @do_hack
 
-    @display.crt.try { |crt|
-      c = crt.getch
-      log "\n>%i<\n" % c
-      case c
-      when 260, 'h'.ord then return -1_i64 # left arrow or h
-      when 261, 'l'.ord then return 1_i64  # right arrow or l
-      when 'x'.ord then return autopilot   # x
+    @display.window.try { |window|
+      while (ev = window.poll).type != Termbox::EVENT_KEY
+      end
 
-      when '!'.ord then @do_hack = true; autopilot # !
+      log "\n>%i<\n" % ev.key
 
-      when '?'.ord # ?
-        buf = [] of Int32
-        crt.move(@display.height + 1, 0)
-        crt.attribute_on @display.colormap(5)
-        Crt.echo
-        while (i = crt.getch) != 13
-          buf << i
-        end
-        Crt.noecho
-        crt.puts "got str: >%s<" % buf.map { |i| i.chr }.join
-        0
-
-        # exit on q, ^c or esc
-      when 'q'.ord, 27, 3 then @cpu.status = :halted
+      if ev.key == Termbox::KEY_ARROW_LEFT || ev.ch.chr == 'h'
+        return -1_i64
+      elsif ev.key == Termbox::KEY_ARROW_RIGHT || ev.ch.chr == 'l'
+        return  1_i64
+      elsif ev.key == Termbox::KEY_ESC || ev.key == Termbox::KEY_CTRL_C || ev.ch.chr == 'q'
+        @cpu.status = :halted
+        return  0_i64
+      elsif ev.ch.chr == 'x'
+        return  autopilot
+      elsif ev.ch.chr == '!'
+        @do_hack = true
+        autopilot
+      else
+        return  0_i64
       end
     }
     return 0_i64
@@ -206,24 +206,20 @@ class ArcadeCabinet
 end
 
 if ARGV[0]? == "play"
-  Crt.init
-  Crt.start_color
-  Crt.raw
-
   cab = ArcadeCabinet.new(VM2.from_file(Utils.cli_param_or_default(1, "day13/input.txt")), true)
   cab.set_free_play
   cab.always_print = true
   cab.run
 
   # pause before exiting
-  cab.display.crt.try { |c|
-    c.attribute_on(cab.display.colormap(5))
-    c.print(cab.display.height//3, 3, "Game Over, press any key to continue")
-    c.refresh
-    c.getch
+  cab.display.window.try { |w|
+    colors = cab.display.colormap(5)
+    w.set_primary_colors(colors[0], colors[1])
+    w.write_string(Termbox::Position.new(3, cab.display.height//3), "Game Over, press any key to continue")
+    w.render
+    w.poll
+    w.shutdown
   }
-
-  Crt.done
 
   puts "Game Over\nFinal Score: %i" % cab.display.segment
 else
