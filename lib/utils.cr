@@ -1,3 +1,4 @@
+require "termbox"
 # misc utility functions that are common in my solutions
 
 module Utils
@@ -23,6 +24,16 @@ module Utils
       pixels.each do |r,g,b|
         file.print("%i %i %i\n" % [r,g,b].map{ |v| v }) # wrap output to 255
       end
+    end
+  end
+
+  # use Termbox peek to check for Ctrl-C/ESC/q
+  def self.termbox_check_abort(window : Termbox::Window, ms=15) : Bool
+    ev = window.peek(15)
+    if ev.ch.chr == 'q' || ev.key == Termbox::KEY_CTRL_C || ev.key == Termbox::KEY_ESC
+      true
+    else
+      false
     end
   end
 end

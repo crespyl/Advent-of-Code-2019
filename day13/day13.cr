@@ -126,6 +126,12 @@ class ArcadeCabinet
   end
 
   def autopilot
+    @display.window.try { |w|
+      if Utils.termbox_check_abort(w)
+        @do_hack = false
+      end
+    }
+
     (@cpu.read_mem(388) <=> @cpu.read_mem(392)).to_i64
   end
 
