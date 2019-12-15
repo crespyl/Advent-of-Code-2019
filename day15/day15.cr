@@ -1,6 +1,20 @@
 #!/usr/bin/env crystal
 require "../lib/utils.cr"
 require "../lib/vm2.cr"
+require "../lib/display.cr"
+
+class MapDisplay < Display::MapDisplay
+  def tilemap(v)
+    case v
+    when 0 then " "
+    when 1 then "."
+    when 2 then "@"
+    when 3 then ">"
+    when 9 then "#"
+    else " "
+    end
+  end
+end
 
 class Droid
   property cpu : VM2::VM
@@ -13,7 +27,7 @@ class Droid
   property start_pos : Tuple(Int32,Int32)
   property station : Tuple(Int32, Int32)
 
-  property map : Hash(Tuple(Int32, Int32), Int32)
+  property map : Display::MapDisplay
 
   DIRS = {
     0 => { 0, 0},
@@ -31,7 +45,8 @@ class Droid
     @state = :ok
     @facing = 4
     @station = {-1,-1}
-    @map = Hash(Tuple(Int32, Int32), Int32).new { |h,k| h[k] = 9 }
+    @map = MapDisplay.new(42,42,curses,9)
+    @map.set_offset(@map.width//-2,@map.height//-2)
     @start_pos = {@x,@y}
   end
 
@@ -135,7 +150,7 @@ class Droid
         when :wall # go forward
           @map[{lx,ly}] = 9
         when :station # end
-          @map[{lx,ly}] = 0
+          @map[{lx,ly}] = 3
         end
       end
 
@@ -149,6 +164,12 @@ end
 prog = Utils.get_input_file(Utils.cli_param_or_default(0, "day15/input.txt"))
 droid = Droid.new(VM2.from_string(prog))
 droid.run
+
+
+
+droid.map[droid.start_pos] = 2
+droid.map[droid.station] = 3
+droid.map.print_display
 
 map = droid.map
 

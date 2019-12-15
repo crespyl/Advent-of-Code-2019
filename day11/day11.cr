@@ -6,7 +6,7 @@ require "../lib/display.cr"
 
 DIRECTIONS = [{0,-1}, {1,0}, {0,1}, {-1,0}]
 
-class MapDisplay < Display
+class MapDisplay < Display::Display
   property tiles : Array(Array(Int64))
   property width : Int32
   property height : Int32

@@ -5,14 +5,13 @@ require "../lib/utils.cr"
 require "../lib/vm2.cr"
 require "../lib/display.cr"
 
-class SegmentDisplay < Display
+class SegmentDisplay < Display::Display
   property segment : Int64
 
   def initialize(@width, @height, curses = false)
     @width = width
     @height = height
-    @tiles = [] of Array(Int64)
-    height.times { @tiles << [0_i64] * width }
+    @tiles = [[0_i64] * width] * height
 
     @crt = Crt::Window.new(height, width) if curses
 
