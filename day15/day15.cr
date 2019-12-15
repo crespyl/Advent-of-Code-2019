@@ -73,9 +73,9 @@ class Droid
     @start_pos = {@x, @y}
 
     if curses
-      @map = MapDisplay.new(`tput cols`.chomp.to_i, `tput lines`.chomp.to_i, curses, 10)
+      @map = MapDisplay.new(`tput cols`.chomp.to_i, `tput lines`.chomp.to_i, 10, curses)
     else
-      @map = MapDisplay.new(42, 42, curses, 10)
+      @map = MapDisplay.new(42, 42, 10, curses)
     end
     @map.set_offset(@map.width//-2, @map.height//-2)
   end
@@ -222,8 +222,12 @@ droid.run
 
 map = droid.map
 
+
+map.set(droid.x,droid.y,1)
+map[droid.start_pos] = 2
+map.print_display
+
 if curses
-  map.print_display
   map.window.try { |w|
     colors = droid.map.colormap(1)
     w.set_primary_colors(Termbox::COLOR_WHITE, Termbox::COLOR_BLUE)
@@ -342,16 +346,8 @@ while !open.empty?
   end
 end
 
-if curses
-  map.window.try { |w|
-    w.set_primary_colors(Termbox::COLOR_WHITE, Termbox::COLOR_BLUE)
-    w.write_string(Termbox::Position.new(1, 1),
-                   "Done, press any key                     ",
-                   Termbox::COLOR_BLUE, Termbox::COLOR_DEFAULT)
-    w.poll
-    w.shutdown
-  }
-end
+map.pause_for_input
+map.shutdown_curses
 
 puts "P1: %i" % (solution.size - 1)
 puts "P2: %i" % (steps - 2) # account for initial expand and final check

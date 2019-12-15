@@ -6,28 +6,7 @@ require "../lib/display.cr"
 
 DIRECTIONS = [{0,-1}, {1,0}, {0,1}, {-1,0}]
 
-class MapDisplay < Display::Display
-  property tiles : Array(Array(Int64))
-  property width : Int32
-  property height : Int32
-
-  def initialize(@width, @height)
-    @tiles = [] of Array(Int64)
-    height.times do
-      @tiles << [-1_i64] * width
-    end
-  end
-
-  def count_painted(color=nil)
-    @tiles.reduce(0) { |sum, row|
-      sum + row.reduce(0) { |rsum, tile|
-        if (color && tile == color) || tile != -1
-          rsum + 1
-        else rsum end
-      }
-    }
-  end
-
+class MapDisplay < Display::MapDisplay
   def rgbmap(val)
     case val
     when  1 then {255,255,255}
@@ -103,6 +82,7 @@ class Robot
       log "  do paint #{a}"
       map.set(x,y,a)
       @paint_count += 1
+      @cpu.status = :halted if update_curses == :stop
       if @print_frames
         @frame = @frame ? @frame.try{ |f| f+1 } : 0
         pixels = @map.to_pixels
@@ -110,6 +90,25 @@ class Robot
       end
       @state = :wait_for_move
     end
+  end
+
+  def update_curses
+    @map.window.try { |w|
+      @map.print_display
+
+      sx, sy = @x - @map.offset_x, @y - @map.offset_y
+      cx, cy = @map.width//2, @map.height//2
+
+      min_x, max_x = 0, @map.width
+      min_y, max_y = 0, @map.height
+
+      ev = w.peek(5)
+      if ev.ch.chr == 'q'
+        return :stop
+      elsif ev.ch.chr == 'c' || (sx < min_x || sx > max_x) || (sy < min_y || sy > max_y)
+        @map.set_offset(@x - cx, @y - cy)
+      end
+    }
   end
 
   def run
@@ -130,15 +129,13 @@ INPUT = Utils.get_input_file(Utils.cli_param_or_default(0, "day11/input.txt"))
 
 # part 1
 width,height = 200,200
-map = MapDisplay.new(width,height) # big enough I guess
+map = MapDisplay.new(50,50,-1)
 robot = Robot.new(map, INPUT)
 robot.x = width//2
 robot.y = height//2
 
-#robot.print_frames = true
 robot.run
 
-#print_map_robot(map, robot)
 pixels = map.tiles.flatten.map { |tile| case tile
                                         when :black then {0,0,0}
                                         when :white then {255,255,255}
@@ -151,7 +148,7 @@ puts "Part 1: %i" % map.count_painted
 
 # part 2
 width,height = 50,10
-map = MapDisplay.new(width,height)
+map = MapDisplay.new(width,height,-1,false)
 robot = Robot.new(map, INPUT)
 robot.x = 2
 robot.y = 2
@@ -160,9 +157,10 @@ map.set(robot.x,robot.y, 1)
 
 robot.run
 
+map.print_display
+
 puts "Robot stopped at: #{robot.x}, #{robot.y}"
 puts "Part 2"
-map.print_display
 
 pixels = map.tiles.flatten.map { |tile| case tile
                                         when :black then {0,0,0}

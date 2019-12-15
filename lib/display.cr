@@ -19,6 +19,14 @@ module Display
       @window = Termbox::Window.new if curses
     end
 
+    def shutdown_curses
+      @window.try { |w| w.shutdown; @window = nil }
+    end
+
+    def pause_for_input
+      @window.try { |w| w.poll }
+    end
+
     def get(x, y)
       @tiles[y][x]
     end
@@ -87,7 +95,7 @@ module Display
       property offset_x : Int32
       property offset_y : Int32
 
-      def initialize(width : Int32, height : Int32, curses = false, default=0)
+      def initialize(width : Int32, height : Int32, default = 0, curses = false)
         @width, @height = width, height
         @offset_x, @offset_y = 0, 0
         @map = Hash(Tuple(Int32,Int32), Int64).new(default.to_i64)
@@ -173,13 +181,17 @@ module Display
 
       def set(x,y,val)
         @map[{x,y}] = val.to_i64
-        @window.try { |window|
-          colors = colormap(val)
-          window.write_string(Termbox::Position.new(x.to_i32 - @offset_x,
-                                                    y.to_i32 - @offset_y),
-                              tilemap(val), colors[0], colors[1])
-          window.render
-        }
+        tx,ty = x-@offset_x, y-@offset_y
+        if tx >= 0 && tx < @width && ty >= 0 && ty < @height
+          @tiles[ty][tx] = val.to_i64
+          @window.try { |window|
+            colors = colormap(val)
+            window.write_string(Termbox::Position.new(tx, ty),
+                                tilemap(val), colors[0], colors[1])
+            window.render
+          }
+        end
+
       end
 
       def get(x,y)
