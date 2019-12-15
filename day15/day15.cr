@@ -73,7 +73,7 @@ class Droid
     @start_pos = {@x, @y}
 
     if curses
-      @map = MapDisplay.new(100, 50, curses, 10)
+      @map = MapDisplay.new(`tput cols`.chomp.to_i, `tput lines`.chomp.to_i, curses, 10)
     else
       @map = MapDisplay.new(42, 42, curses, 10)
     end
