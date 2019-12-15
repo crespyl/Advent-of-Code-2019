@@ -4,20 +4,18 @@ require "../lib/vm2.cr"
 
 class Droid
   property cpu : VM2::VM
+
   property x : Int32
   property y : Int32
-  property station : Tuple(Int32, Int32)
-
-  property move_count : Int32
   property facing : Int64
 
-  property min_pos : Tuple(Int32,Int32)
-  property max_pos : Tuple(Int32,Int32)
+  property move_count : Int32
   property start_pos : Tuple(Int32,Int32)
+  property station : Tuple(Int32, Int32)
 
   property map : Hash(Tuple(Int32, Int32), Int32)
 
-  @@DIRS = {
+  DIRS = {
     0 => { 0, 0},
     1 => { 0,-1},
     2 => { 0, 1},
@@ -35,16 +33,10 @@ class Droid
     @station = {-1,-1}
     @map = Hash(Tuple(Int32, Int32), Int32).new { |h,k| h[k] = 9 }
     @start_pos = {@x,@y}
-
-    @min_pos = {@x,@y}
-    @max_pos = {@x,@y}
-
-    @cpu.debug = false
-
   end
 
   def coords_facing(dir)
-    d = @@DIRS[dir]
+    d = DIRS[dir]
     {@x+d[0],@y+d[1]}
   end
 
@@ -78,11 +70,11 @@ class Droid
       @cpu.send_input(reverse)
       @cpu.run
       raise "COULDN'T BACKTRACK !" if @cpu.read_output != 1
-      return :ok
+      :ok
     when 0 # wall
-      return :wall
+      :wall
     when 2 # station
-      return :station
+      :station
     else raise "got bad output from cpu"
     end
   end
@@ -134,9 +126,9 @@ class Droid
         end
       when :look
         state = :move
-        lx,ly = coords_facing(left_from(@facing))
-        d = left_from(@facing)
-        case check_dir(d)
+        dir = left_from(@facing)
+        lx,ly = coords_facing(dir)
+        case check_dir(dir)
         when :ok
           @map[{lx,ly}] = 1
           turn_left
@@ -163,7 +155,6 @@ map = droid.map
 # Use A* to map from droid.start_pos to droid.station
 
 alias Pos = Tuple(Int32, Int32)
-alias Route = Array(Pos)
 
 start = droid.start_pos
 station = droid.station
@@ -172,10 +163,6 @@ solution = [] of Pos
 visited = Set(Pos).new
 open = [{start, [] of Pos, 1}]
 
-def dist(a,b)
-  Math.sqrt( (a[0]-b[0])*(a[0]-b[0]) + ((a[1]-b[1])*(a[1]-b[1])) )
-end
-
 def neighbors(loc) : Array(Pos)
   x,y = loc
   [{x-1,y}, {x+1,y}, {x,y+1}, {x, y-1}]
@@ -183,14 +170,7 @@ end
 
 #puts "Start search..."
 
-cycles = 0
 while !open.empty?
-  cycles += 1
-
-  if cycles % 1000 == 0
-    puts "cycle #{cycles}; open set: #{open.size}"
-  end
-
   loc, route, cost = open.pop
   next if visited.includes? loc
 
@@ -210,7 +190,6 @@ while !open.empty?
   end
 
   open = open.sort_by { |_,_,cost| cost }
-
 end
 
 puts "P1: %i" % (solution.size-1)
@@ -222,23 +201,17 @@ visited = Set(Pos).new
 steps = 0
 
 while !open.empty?
-
   frontier = [] of Pos
-
   open.each do |loc|
     next if visited.includes? loc
-
     visited.add(loc)
-
     neighbors(loc).each do |neighbor|
       frontier << neighbor if map[neighbor] == 1
     end
   end
 
   open = frontier
-  break if open.empty?
-
   steps += 1
 end
 
-puts "P2: %i" % (steps-1) # -1 for the initial expand
+puts "P2: %i" % (steps-2) # account for initial expand and final check
