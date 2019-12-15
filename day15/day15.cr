@@ -334,7 +334,7 @@ while !open.empty?
     map.window.try { |w|
       ev = w.peek(15)
       if ev.ch.chr == 'q'
-        break
+        open.clear
       elsif ev.ch.chr == 'c'
         map.set_offset(-21,-21)
       end
