@@ -12,20 +12,21 @@ class MapDisplay < Display::MapDisplay
     when 3 then ">"
     when 4 then "O"
     when 9 then "#"
-    else        " "
+    when 10 then " "
+    else "*"
     end
   end
 
   def colormap(val)
     case val
     when  0 then {Termbox::COLOR_DEFAULT, Termbox::COLOR_DEFAULT}
-    when  1 then {Termbox::COLOR_WHITE, Termbox::COLOR_DEFAULT}
-    when  2 then {Termbox::COLOR_CYAN | Termbox::ATTR_BOLD, Termbox::COLOR_DEFAULT}
-    when  3 then {Termbox::COLOR_GREEN, Termbox::COLOR_DEFAULT}
-    when  4 then {Termbox::COLOR_BLUE | Termbox::ATTR_BOLD, Termbox::COLOR_DEFAULT}
+    when  1 then {Termbox::COLOR_WHITE, Termbox::COLOR_BLACK}
+    when  2 then {Termbox::COLOR_CYAN | Termbox::ATTR_BOLD, Termbox::COLOR_BLACK}
+    when  3 then {Termbox::COLOR_GREEN, Termbox::COLOR_BLACK}
+    when  4 then {Termbox::COLOR_BLUE | Termbox::ATTR_BOLD, Termbox::COLOR_BLACK}
     when  9 then {Termbox::COLOR_WHITE, Termbox::COLOR_BLACK}
-    when 10 then {Termbox::COLOR_BLACK, Termbox::COLOR_DEFAULT}
-    else         {Termbox::COLOR_WHITE, Termbox::COLOR_RED}
+    when 10 then {Termbox::COLOR_DEFAULT, Termbox::COLOR_DEFAULT}
+    else {Termbox::COLOR_CYAN, Termbox::COLOR_BLACK}
     end
   end
 
@@ -36,8 +37,16 @@ class MapDisplay < Display::MapDisplay
     when 3 then {0, 255, 0}
     when 4 then {41, 139, 132}
     when 9 then {139, 50, 23}
-    else        {0, 0, 0}
+    when 10 then {0, 0, 0}
+    else {255, 255, 127}
     end
+  end
+
+  def dump_frame
+    @frame = 0 unless @frame
+    @frame = @frame.try { |f| f+1}
+    pixels = self.to_pixels
+    Utils.write_ppm(@width, @height, pixels, "frames/d15-%08d.ppm" % @frame)
   end
 end
 
@@ -52,7 +61,7 @@ class Droid
   property start_pos : Tuple(Int32, Int32)
   property station : Tuple(Int32, Int32)
 
-  property map : Display::MapDisplay
+  property map : MapDisplay
 
   DIRS = {
     0 => {0, 0},
@@ -156,7 +165,7 @@ class Droid
     @facing = right_from(@facing)
   end
 
-  def update_curses
+  def update_vis
     @map.window.try { |w|
       @map.print_display
 
@@ -173,6 +182,9 @@ class Droid
         @map.set_offset(@x - cx, @y - cy)
       end
     }
+    if ENV["AOC_FRAMES"]? == "on"
+      @map.dump_frame
+    end
   end
 
   def run
@@ -205,7 +217,7 @@ class Droid
         end
       end
 
-      break if update_curses == :stop
+      break if update_vis == :stop
 
       # 3k should be enough to map anything
       break if @move_count > 3000
@@ -214,9 +226,9 @@ class Droid
 end
 
 # Extract map
-prog = Utils.get_input_file("day15/input.txt")
+prog = Utils.get_input_file(Utils.cli_param_or_default(0,"day15/input.txt"))
 
-curses = ARGV[0]? == "play"
+curses = ARGV[1]? == "play"
 droid = Droid.new(VM2.from_string(prog), curses)
 droid.run
 
@@ -239,9 +251,7 @@ if curses
   }
 end
 
-pixels = map.to_pixels
-Utils.write_ppm(map.width, map.height, pixels, "day15/map.ppm")
-
+map.dump_frame
 
 # Use A* to map from droid.start_pos to droid.station
 
@@ -281,21 +291,24 @@ while !open.empty?
     open << {neighbor, new_route, new_cost}
   end
 
-  open = open.sort_by { |_, _, cost| cost }
+  open = open.sort_by { |_, _, cost| 0-cost }
 end
 
-if curses
+if curses || ENV["AOC_FRAMES"]? == "on"
   map.set(droid.x,droid.y,1)
   map[droid.start_pos] = 2
   solution.shift
-  solution.each do |loc|
-    map[loc] = 3
-    map.print_display
+  stop = false
+  solution.each_with_index do |loc, i|
+    break if stop
+    map[loc] = 11+i # use values over 10 to distinguish from walls/unexplored/etc
+    map.print_display if curses
+    map.dump_frame if ENV["AOC_FRAMES"]? == "on"
 
     map.window.try { |w|
       ev = w.peek(30)
-      if ev.ch.chr == 'q'
-        break
+      if ev.ch.chr == 'q'  || [Termbox::KEY_ESC, Termbox::KEY_CTRL_C].includes? ev.key
+        stop = true
       elsif ev.ch.chr == 'c'
         map.set_offset(-21,-21)
       end
@@ -305,7 +318,7 @@ if curses
   map.window.try { |w|
     w.set_primary_colors(Termbox::COLOR_WHITE, Termbox::COLOR_GREEN)
     w.write_string(Termbox::Position.new(1, 1),
-                   "Done, press any key                     ",
+                   "Done, press any key",
                    Termbox::COLOR_BLUE, Termbox::COLOR_DEFAULT)
     w.poll
   }
@@ -324,9 +337,12 @@ while !open.empty?
   open.each do |loc|
     next if visited.includes? loc
     visited.add(loc)
+
     map[loc] = 4
+    map.dump_frame if ENV["AOC_FRAMES"]? == "on"
+
     neighbors(loc).each do |neighbor|
-      frontier << neighbor if map[neighbor] < 9
+      frontier << neighbor if map[neighbor] != 9 && map[neighbor] != 10
     end
   end
 
