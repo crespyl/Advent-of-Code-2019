@@ -217,7 +217,7 @@ class Droid
         end
       end
 
-      break if update_vis == :stop
+      break if (@move_count > 0 && {@x,@y} == @start_pos) || update_vis == :stop
 
       # 3k should be enough to map anything
       break if @move_count > 3000
@@ -239,18 +239,7 @@ map.set(droid.x,droid.y,1)
 map[droid.start_pos] = 2
 map.print_display
 
-if curses
-  map.window.try { |w|
-    colors = droid.map.colormap(1)
-    w.set_primary_colors(Termbox::COLOR_WHITE, Termbox::COLOR_BLUE)
-    w.write_string(Termbox::Position.new(1, 1),
-                   "Done Mapping, press any key to continue",
-                   Termbox::COLOR_WHITE, Termbox::COLOR_BLUE)
-    w.render
-    w.poll
-  }
-end
-
+map.pause_for_input
 map.dump_frame
 
 # Use A* to map from droid.start_pos to droid.station
@@ -315,15 +304,7 @@ if curses || ENV["AOC_FRAMES"]? == "on"
     }
   end
 
-  map.window.try { |w|
-    w.set_primary_colors(Termbox::COLOR_WHITE, Termbox::COLOR_GREEN)
-    w.write_string(Termbox::Position.new(1, 1),
-                   "Done, press any key",
-                   Termbox::COLOR_BLUE, Termbox::COLOR_DEFAULT)
-    w.poll
-  }
 end
-
 
 # P2
 # Flood fill from station, count the steps
