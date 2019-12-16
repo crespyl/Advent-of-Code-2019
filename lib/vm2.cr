@@ -32,6 +32,22 @@ module VM2
       @output = [] of Int64
     end
 
+    def clone
+      new_vm = VM.new(@mem)
+      new_vm.debug = @debug
+      new_vm.pc = @pc
+      new_vm.rel_base = @rel_base
+      new_vm.cycles = @cycles
+      new_vm.status = @status
+      new_vm.mem = @mem.clone
+      new_vm.input = @input
+      new_vm.output = @output
+      new_vm.input_fn = @input_fn
+      new_vm.output_fn = @output_fn
+      new_vm.exec_hook_fn = @exec_hook_fn
+      new_vm
+    end
+
     def send_input(val : Int64)
       @input << val
       @status = :ok if @status == :needs_input
