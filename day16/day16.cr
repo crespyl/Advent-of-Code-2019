@@ -10,11 +10,6 @@ def fft_base_pattern(n) # return an interator
   base.map { |b| [b] * (n + 1) }.flatten.cycle.skip(1)
 end
 
-# return a zip for computing the transformation of the nth digit in list
-def fft_zip(list, n)
-  list.cycle.zip(fft_base_pattern(n))
-end
-
 # take a list of digits, for each digit, compute the sum of the following digits % 10
 def precompute_sums(list)
   list.map_with_index { |i,idx|
@@ -27,14 +22,13 @@ def fft_phases(list : Array(Int32), n)
     precomputed = precompute_sums(list[(list.size//2)..])
     list = list.map_with_index { |v, idx|
       if idx > list.size//2
-        z = precomputed[idx-list.size//2]
+        precomputed[idx-list.size//2]
       else
-        z = list.zip(fft_base_pattern(idx)).map { |pair|
+        list.zip(fft_base_pattern(idx)).map { |pair|
           l, p = pair
           l * p
         }.sum.abs % 10
       end
-
     }
   end
   list.join[0..7]
@@ -52,7 +46,7 @@ offset = input[0...7].join.to_i
 puts "Offset: %i" % offset
 
 # because of how the base pattern expands, beyond the halfway point the pattern
-# for every digit n will be n 0s followed by 1s for the rest of the list. This
+# for every digit n will be n-1 0s followed by 1s for the rest of the list. This
 # means that the transformation for a digit n (n > size/2) is simply the sum of
 # the following digits.
 
@@ -74,8 +68,7 @@ def p2_fast_fft_offset(numbers, offset)
     end
     precomputed.reverse!
 
-    next_phase = numbers[0...offset]
-    next_phase.concat numbers[offset...].map_with_index { |n,i| precomputed[i] % 10 }
+    next_phase = numbers[0...offset] + numbers[offset...].map_with_index { |n,i| precomputed[i] % 10 }
 
     numbers = next_phase
   end
