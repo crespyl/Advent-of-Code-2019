@@ -245,6 +245,10 @@ class Debugger
           str.chars.map { |c| c.ord.to_i64 }.each { |ascii| vm.send_input(ascii) }
         end
 
+      when "line"
+        str = "%s\n" % args.join(" ")
+        str.chars.map { |c| c.ord.to_i64 }.each { |ascii| vm.send_input(ascii) }
+
       when "output" # show the machine's output
         log @output_log
 
