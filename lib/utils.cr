@@ -2,6 +2,48 @@ require "termbox"
 # misc utility functions that are common in my solutions
 
 module Utils
+  struct Vec2
+    property x : Int32
+    property y : Int32
+
+    def initialize(@x,@y) end
+
+    def [](i : Int32)
+      case i
+      when 0 then @x
+      when 1 then @y
+      else raise "Bad index into Vec2"
+      end
+    end
+
+    def []=(i : Int32, val : Int32)
+      case i
+      when 0 then @x = val
+      when 1 then @y = val
+      else raise "Bad index into Vec2"
+      end
+    end
+
+    def +(other : Vec2)
+      Vec2.new(self.x+other.x,self.y+other.y)
+    end
+
+    def -(other : Vec2)
+      Vec2.new(self.x-other.x,self.y-other.y)
+    end
+
+    def *(other : Vec2)
+      Vec2.new(self.x*other.x,self.y*other.y)
+    end
+
+    def to_s
+      "Vec2(#{@x},#{@y})"
+    end
+    def inspect
+      to_s
+    end
+  end
+
   # check the AOC_DEBUG env var
   def self.enable_debug_output?
     ENV.has_key?("AOC_DEBUG") ? ENV["AOC_DEBUG"] == "true" : false
