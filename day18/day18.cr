@@ -21,10 +21,7 @@ hero.select_long_term_goal
 
 while !hero.satisfied?
   goal = hero.select_next_goal
-  puts "goal: #{goal}"
-  puts "go there"
-  hero.walk_to(goal)
-  puts "arrived, total steps: #{hero.pedometer}"
+  hero.step_to(goal)
 end
 
 puts "Sequence: #{hero.history}"
@@ -140,9 +137,32 @@ struct Hero
       end
     end
 
-    puts "I WANT: #{want}"
+    puts "I WANT: #{want.join}"
+    puts "I HAVE: #{@inv.join}"
 
     return want.empty?
+  end
+
+  def step_to(dest : Tile)
+    step_to(map.find(dest))
+  end
+
+  def step_to(dest : Vec2)
+    return unless dest != @loc
+
+    path = find_path(@map, @loc, dest)
+    step = path.skip(1).first
+
+    tile = @map.get(step)
+    raise "TRIED TO DO THE IMPASSIBLE: #{tile} : #{step}" unless can_pass? tile
+    @pedometer += 1
+    @loc = step
+
+    puts "   ...stepped to #{step}"
+
+    if tile.ascii_lowercase?
+      take_key(tile)
+    end
   end
 
   def walk_to(dest : Tile)
@@ -184,12 +204,32 @@ struct Hero
       select_long_term_goal
     end
 
+    # next_goal = reqs.keys.reject { |k| reqs[k].size > 0 }.sort_by { |k|
+    #   value_key(k,true)
+    # }.last
+
     # find the next available pre-requisite for that key
     pre_reqs = reqs[@long_term_goal]
-    next_goal = pre_reqs.empty? ? @long_term_goal : pre_reqs.sort_by { |k| value_key(k.downcase) }.last.downcase
+    next_goal = pre_reqs.empty? ? @long_term_goal : pre_reqs.sort_by { |k| value_key(k.downcase,true) }.last.downcase
     while !reqs[next_goal].empty?
       next_goal = reqs[next_goal].first.downcase
     end
+
+    next_goal_v = value_key(next_goal)
+    puts "value of next step to goal: #{next_goal} = #{next_goal_v}"
+
+    # find best globally available key
+    next_best = reqs.keys.reject { |k| reqs[k].size > 0 }.sort_by { |k|
+      value_key(k,true)
+    }.last
+    next_best_v = value_key(next_best,false)
+    puts "value of best key: #{next_best} = #{next_best_v}"
+
+    if next_best_v[2] > next_goal_v[2]+2
+      next_goal = next_best
+      puts "off-path opportunity, pursuing #{next_best}"
+    end
+    
 
     puts "selected next goal: #{next_goal}"
 
@@ -204,27 +244,37 @@ struct Hero
     reqs = find_reqs_for_keys
 
     # find the best key
-    best = reqs.keys.sort_by { |k| {reqs[k].size, -@map.path_dist(@loc,@map.find(k))} }.last
+    best = reqs.keys.sort_by { |k| value_key(k) }.last
 
     puts "selected long term goal: #{best}"
     @long_term_goal = best
   end
 
-  # determine the value of a given key based on how many other keys it's a
-  # requirement for
-  def value_key(key : Tile)
+  # determine the value of a given key based
+  def value_key(key : Tile, by_pre_reqs=false)
     reqs = find_reqs_for_keys
 
-    reqs.reduce(0) { |sum,kv| sum + (kv[1].includes?(key) ? 1 : 0) }
+    r = reqs[key].size
+    d = @map.path_dist(@loc, @map.find(key))
+    pre = reqs.values.reduce(0) { |sum, rs| rs.includes?(key.upcase) ? sum+rs.size : sum }
+    v = by_pre_reqs ? { pre, r, -d } : { r, pre, -d }
+
+    # if by_pre_reqs
+    #   puts "value by pre-reqs #{key}: %s" % [v]
+    # else
+    #   puts "valuing #{key}: %s" % [v]
+    # end
+
+    return v
   end
 
   # find the requirements for all the keys in the @map (that we don't already
   # have), and excluding requirements (keys) we already have
-  def find_reqs_for_keys
+  def find_reqs_for_keys(relative=true)
     reqs = {} of Tile => Array(Tile)
     @map.keys.each do |k|
       key_loc, key = k
-      doors = find_reqs_for_pos(@map, key_loc, @loc).reject { |door| can_pass?(door) }
+      doors = find_reqs_for_pos(@map, key_loc, @loc).reject { |door| relative ? can_pass?(door) : false }
       reqs[key] = doors
     end
     reqs.reject { |k,v| @inv.includes? k }
