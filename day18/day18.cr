@@ -10,68 +10,298 @@ map = Map.new(input.lines.map { |l| l.chars.to_a })
 # up, right, down, left
 DIRS = [Vec2.new(0,-1), Vec2.new(1,0), Vec2.new(0,1), Vec2.new(-1,0)]
 
-puts input
-
-puts "Start: %s" % map.find('@').to_s
+#puts input
+map.print_map
 
 start = map.find('@')
-hero = Hero.new(map, start)
+puts "Start: %s" % start.to_s
 
-hero.select_long_term_goal
+#start_state = {Set{'a', 'b'}, start, 0, ['a', 'b']}
+start_state = {Set(Tile).new, start, 0, [] of Tile}
+#puts "Available Moves: #{available_moves(map, start_state)}"
 
-while !hero.satisfied?
-  goal = hero.select_next_goal
-  hero.step_to(goal)
+paths = dfs_moves(map, start_state)
+# puts "Possible Paths: "
+# paths.each do |p|
+#   puts p
+# end
+
+# sort by distance covered
+paths = paths.to_a.sort_by { |p| p[2] }
+
+if paths.size > 0
+  puts "solution: #{fmt_step(paths[0])}"
+  puts "Part 1: %s" % paths[0][2]
+else
+  puts "no solution found!" unless paths.size > 0
 end
 
-puts "Sequence: #{hero.history}"
-
-puts "Part 1: %s" % hero.pedometer
 puts "Part 2: %s" % 0
 
 alias Tile = Char
+
+# owned keys, current location, pedometer
+alias State = Tuple(Set(Tile), Vec2, Int32, Array(Tile))
+
+def fmt_step(s : State)
+  "<take %s : %5i : %s>" % [s[3].last, s[2], s[3].join]
+end
+
+def dfs_moves(map, start : State, limit=2000)
+  iterations = 0
+  end_states = Set(State).new
+
+  open = [start]
+  visited = Set(State).new
+
+  while !open.empty?
+    iterations += 1
+    state = open.pop
+    puts "iter: #{iterations}: open states: #{open.size}\n current state: #{fmt_step(state)}" if iterations % 100000 == 0
+
+    next if visited.includes? state || state[2] > limit
+    #puts "check state: %s" % fmt_step(state)
+
+    if state[0].superset? map.all_keys
+      end_states.add state
+      limit = state[2] if state[2] < limit
+      puts "found possible end: #{state}"
+    end
+
+    visited.add(state)
+    #puts "check: #{fmt_step(state)}"
+
+    # get available moves and sort by closest key first
+    moves = available_moves(map, state).to_a.sort_by { |move|
+      _, n_loc, _, n_hist = move
+      {-map.key_difficulty(n_hist.last), map.get_distance_for(n_hist.last, state[1])}
+    }.reverse
+
+    moves.each do |n|
+      next if n[2] > limit
+      next if visited.includes? n || n[2] > limit
+      #puts "   found possible move:  #{fmt_step(n)}"
+      open << n
+    end
+  end
+
+  return end_states
+end
+
+
+def bfs_moves(map, start : State, limit=6116, frontier_cap=10000000)
+  end_states = Set(State).new
+  shortest_win = limit
+  iterations = 0
+
+  open = Set{start}
+  visited = Set(State).new
+
+  while !open.empty?
+    iterations += 1
+    puts "iter: #{iterations}: open states: #{open.size}" if true || iterations % 100 == 0
+    frontier = Set(State).new
+
+    open.each do |state|
+      next if state[2] > shortest_win
+      next if visited.includes? state
+      #puts "check state: %s" % fmt_step(state)
+
+      if state[0].superset? map.all_keys
+        end_states.add state
+        if state[2] < shortest_win
+          shortest_win = state[2]
+        end
+        puts "found possible end: #{state}"
+      end
+
+      visited.add(state)
+
+      available_moves(map, state).each do |n|
+        next if n[2] > shortest_win
+        #next if n[2] >= limit
+        next if visited.includes? n
+        next if frontier.size > frontier_cap
+        #puts "found possible move: #{fmt_step(n)}"
+        frontier.add(n)
+      end
+    end
+
+    open = frontier
+  end
+
+  return end_states
+end
+
+# MOVES_MEMO = Hash(State, Set(State)).new
+def available_moves(map, state : State) : Set(State)
+  # MOVES_MEMO[state]? || begin
+                          owned, loc, steps, seq = state
+                          keys = available_keys(map, owned)
+
+                          states = keys.map { |k|
+                            {owned + Set{k}, map.key_loc(k), steps + map.get_distance_for(k, loc), seq.clone << k}
+                          }.to_set
+
+                          moves = states.map { |state|
+                            _, new_loc, new_dist, new_seq = state
+
+                            on_the_way = find_path(map, loc, new_loc).map { |l| map.get(l) }.select(&.ascii_lowercase?).reject { |k| owned.includes? k }
+
+                            if on_the_way.size > 1
+                              # replace this with a new state that includes the pickup
+                              {owned + on_the_way.to_set, new_loc, new_dist, seq.clone.concat on_the_way}
+                            else
+                              state
+                            end
+                          }
+
+                          moves = moves.to_set
+
+                          # MOVES_MEMO[state] = moves
+                          # MOVES_MEMO[state]
+                        #end
+end
+
+KEYS_MEMO = Hash(Set(Tile), Set(Tile)).new
+def available_keys(map, owned_keys : Set(Tile))
+  KEYS_MEMO[owned_keys]? || begin
+                              available = Set(Tile).new
+                              map.keys.each do |k,reqs|
+                                available.add(k) if reqs.all? { |r| owned_keys.includes? r }
+                              end
+                              keys = available.reject { |k| owned_keys.includes? k }.to_set
+                              KEYS_MEMO[owned_keys] = keys
+                            end
+end
 
 # return the list of doors on that path
 def find_reqs_for_pos(map : Map, start : Vec2, goal : Vec2)
   find_path(map, start, goal).map { |loc| map.get(loc) }.reject { |tile| !tile.ascii_uppercase? }
 end
 
+PATH_MEMO = Hash(Array(Vec2), Array(Vec2)).new
 def find_path(map : Map, start : Vec2, goal : Vec2) : Array(Vec2)
-  open = [{start, [] of Vec2, 0}]
-  visited = Set(Vec2).new
+  PATH_MEMO[[start,goal].sort]? || begin
+                                open = [{start, [] of Vec2, 0}]
+                                visited = Set(Vec2).new
 
-  while !open.empty?
-    loc, route, len = open.pop
-    next if visited.includes? loc
+                                while !open.empty?
+                                  loc, route, len = open.pop
+                                  next if visited.includes? loc
 
-    new_route = route + [loc]
-    if loc == goal
-      return new_route
-    end
+                                  new_route = route + [loc]
+                                  if loc == goal
+                                    PATH_MEMO[[start,goal].sort] = new_route
+                                    return new_route
+                                  end
 
-    visited.add(loc)
+                                  visited.add(loc)
 
-    neighbors(loc).each do |n|
-      next if map.get(n) == '#'
-      open << {n, new_route, len+1}
-    end
-  end
+                                  neighbors(loc).each do |n|
+                                    next if map.get(n) == '#'
+                                    open << {n, new_route, len+1}
+                                  end
+                                end
 
-  return [] of Vec2
+                                return [] of Vec2
+                              end
 end
 
 class Map
   property tiles : Array(Array(Tile))
-  property keys : Array(Tuple(Vec2, Tile))
+  property all_keys : Set(Tile)
+  property keys : Hash(Tile, Array(Tile))
+  property key_locs : Hash(Tile, Vec2)
+  property distances : Hash(Tile, Array(Int32))
 
   def initialize(tiles)
     @tiles = tiles
-    @keys = [] of Tuple(Vec2, Tile)
+    @all_keys = Set(Tile).new
+    @keys = Hash(Tile, Array(Tile)).new([] of Tile)
+    @key_locs = Hash(Tile, Vec2).new
+    @distances = Hash(Tile, Array(Int32)).new
+
+    # find the keys and their requirements
+    hero_loc = find('@')
     self.each_tile do |x,y,tile|
       if tile.ascii_lowercase?
-        keys << {Vec2.new(x,y), tile}
+        @all_keys.add tile
+        @keys[tile] += find_path(self, hero_loc, Vec2.new(x,y))
+                      .map { |loc| get(loc) }
+                      .select { |t| t.ascii_uppercase? }
+                      .map { |k| k.downcase }
+        @key_locs[tile] = Vec2.new(x,y)
+
+
+        @distances[tile] = calc_dmap_for(Vec2.new(x,y))
       end
     end
+  end
+
+  def key_difficulty(key : Tile)
+    @keys[key].size
+  end
+
+  def key_loc(key : Tile)
+    @key_locs[key]
+  end
+
+  def calc_dmap_for(loc : Vec2)
+    dmap = Array(Int32).new(width*height, 9999999)
+    bfs(loc) do |bfs_pos, steps|
+      dmap[bfs_pos.y * width + bfs_pos.x] = steps
+    end
+    dmap
+  end
+
+  def get_distance_for(key : Tile, loc : Vec2)
+    return Int32::MAX unless dmap = @distances[key]?
+    dmap[loc.y * width + loc.x]
+  end
+
+  # bfs non-wall tiles, yield location and step count for each
+  def bfs(start : Vec2, &block)
+    open = Set{start}
+    visited = Set(Vec2).new
+    steps = 0
+
+    while !open.empty?
+      frontier = Set(Vec2).new
+
+      open.each do |loc|
+        next if visited.includes? loc
+
+        yield(loc, steps)
+        visited.add(loc)
+
+        neighbors(loc).each do |n|
+          frontier.add(n) if walkable?(n)
+        end
+      end
+
+      open = frontier
+      steps += 1
+    end
+  end
+
+  def walkable?(t : Tile)
+    case t
+    when '#' then false
+    else true
+    end
+  end
+
+  def walkable?(l : Vec2)
+    walkable?(get(l))
+  end
+
+  def width
+    @tiles[0].size
+  end
+
+  def height
+    @tiles.size
   end
 
   def each_tile(&block)
@@ -109,189 +339,27 @@ class Map
     end
     return '#'
   end
-end
 
-struct Hero
-  property map : Map
-  property loc : Vec2
-  property inv : Set(Tile)
-  property pedometer : Int32
-  property long_term_goal : Tile
-  property history : Array(Tile)
-
-  def initialize(map : Map, loc : Vec2)
-    @map = map
-    @loc = loc
-    @inv = Set(Tile).new
-    @pedometer = 0
-    @long_term_goal = '-'
-    @history = [] of Tile
-  end
-
-  def satisfied?
-    want = [] of Tile
-
-    map.keys.each do |k|
-      if ! @inv.includes? k[1]
-        want << k[1]
+  def print_map
+    @tiles.each do |row|
+      row.each do |tile|
+        print tile
       end
-    end
-
-    puts "I WANT: #{want.join}"
-    puts "I HAVE: #{@inv.join}"
-
-    return want.empty?
-  end
-
-  def step_to(dest : Tile)
-    step_to(map.find(dest))
-  end
-
-  def step_to(dest : Vec2)
-    return unless dest != @loc
-
-    path = find_path(@map, @loc, dest)
-    step = path.skip(1).first
-
-    tile = @map.get(step)
-    raise "TRIED TO DO THE IMPASSIBLE: #{tile} : #{step}" unless can_pass? tile
-    @pedometer += 1
-    @loc = step
-
-    puts "   ...stepped to #{step}"
-
-    if tile.ascii_lowercase?
-      take_key(tile)
+      print '\n'
     end
   end
 
-  def walk_to(dest : Tile)
-    walk_to(map.find(dest))
-  end
-
-  def walk_to(dest : Vec2)
-    return unless dest != @loc
-
-    path = find_path(@map, @loc, dest)
-
-    # skip the first step since that's where we are now
-    path.skip(1).each do |step|
-      tile = @map.get(step)
-      raise "TRIED TO DO THE IMPASSIBLE: #{tile} : #{step}" unless can_pass? tile
-
-      @pedometer += 1
-      @loc = step
-
-      puts "   ...walked to #{step}"
-
-      if tile.ascii_lowercase?
-        take_key(tile)
+  def print_dmap_for(key : Tile)
+    dmap_tiles = "0123456789abcdefghijklmnopqrstuvwxyz".chars.to_a
+    @tiles.each_with_index do |row, y|
+      row.each_with_index do |tile, x|
+        if walkable?(tile)
+          print dmap_tiles[get_distance_for(key, Vec2.new(x,y)) % dmap_tiles.size]
+        else
+          print tile
+        end
       end
-    end
-  end
-
-  def take_key(key : Tile)
-    return if @inv.includes? key
-    puts "got key #{key}"
-    @history << key
-    @inv.add key
-  end
-
-  def select_next_goal
-    reqs = find_reqs_for_keys
-
-    if reqs[@long_term_goal]? == nil || @inv.includes? @long_term_goal
-      select_long_term_goal
-    end
-
-    # next_goal = reqs.keys.reject { |k| reqs[k].size > 0 }.sort_by { |k|
-    #   value_key(k,true)
-    # }.last
-
-    # find the next available pre-requisite for that key
-    pre_reqs = reqs[@long_term_goal]
-    next_goal = pre_reqs.empty? ? @long_term_goal : pre_reqs.sort_by { |k| value_key(k.downcase,true) }.last.downcase
-    while !reqs[next_goal].empty?
-      next_goal = reqs[next_goal].first.downcase
-    end
-
-    next_goal_v = value_key(next_goal)
-    puts "value of next step to goal: #{next_goal} = #{next_goal_v}"
-
-    # find best globally available key
-    next_best = reqs.keys.reject { |k| reqs[k].size > 0 }.sort_by { |k|
-      value_key(k,true)
-    }.last
-    next_best_v = value_key(next_best,false)
-    puts "value of best key: #{next_best} = #{next_best_v}"
-
-    if next_best_v[2] > next_goal_v[2]+2
-      next_goal = next_best
-      puts "off-path opportunity, pursuing #{next_best}"
-    end
-    
-
-    puts "selected next goal: #{next_goal}"
-
-    return next_goal
-  end
-
-  # find the hardest key to go after
-  #
-  # we want the hardest key to be the last one we pick up, and therefore its
-  # requirements should define the order of the other keys
-  def select_long_term_goal
-    reqs = find_reqs_for_keys
-
-    # find the best key
-    best = reqs.keys.sort_by { |k| value_key(k) }.last
-
-    puts "selected long term goal: #{best}"
-    @long_term_goal = best
-  end
-
-  # determine the value of a given key based
-  def value_key(key : Tile, by_pre_reqs=false)
-    reqs = find_reqs_for_keys
-
-    r = reqs[key].size
-    d = @map.path_dist(@loc, @map.find(key))
-    pre = reqs.values.reduce(0) { |sum, rs| rs.includes?(key.upcase) ? sum+rs.size : sum }
-    v = by_pre_reqs ? { pre, r, -d } : { r, pre, -d }
-
-    # if by_pre_reqs
-    #   puts "value by pre-reqs #{key}: %s" % [v]
-    # else
-    #   puts "valuing #{key}: %s" % [v]
-    # end
-
-    return v
-  end
-
-  # find the requirements for all the keys in the @map (that we don't already
-  # have), and excluding requirements (keys) we already have
-  def find_reqs_for_keys(relative=true)
-    reqs = {} of Tile => Array(Tile)
-    @map.keys.each do |k|
-      key_loc, key = k
-      doors = find_reqs_for_pos(@map, key_loc, @loc).reject { |door| relative ? can_pass?(door) : false }
-      reqs[key] = doors
-    end
-    reqs.reject { |k,v| @inv.includes? k }
-  end
-
-  def can_pass?(tile : Tile)
-    case tile
-    when '.' then true
-    when '@' then true
-    else
-      if tile.ascii_lowercase?
-        true
-      elsif tile.ascii_uppercase?
-        @inv.includes? tile.downcase
-      else
-        false
-      end
+      print '\n'
     end
   end
 end
@@ -300,4 +368,4 @@ def neighbors(loc : Vec2)
   DIRS.map { |d| loc + d }
 end
 
-# 7206 too high
+# 6116 too high
