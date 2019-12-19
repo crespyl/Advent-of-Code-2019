@@ -37,43 +37,45 @@ else
   puts "no solution found!" unless paths.size > 0
 end
 
-# input replace to separate map into sub-grids
-input2 = input.lines.map { |l| l.chars.to_a }
-input2[40][40] = '#'
-input2[40][39] = '#'
-input2[40][41] = '#'
-input2[39][40] = '#'
-input2[41][40] = '#'
-input2[39][39] = '@'
-input2[39][41] = '@'
-input2[41][39] = '@'
-input2[41][41] = '@'
+if ARGV.includes? "p2"
+  # input replace to separate map into sub-grids
+  input2 = input.lines.map { |l| l.chars.to_a }
+  input2[40][40] = '#'
+  input2[40][39] = '#'
+  input2[40][41] = '#'
+  input2[39][40] = '#'
+  input2[41][40] = '#'
+  input2[39][39] = '@'
+  input2[39][41] = '@'
+  input2[41][39] = '@'
+  input2[41][41] = '@'
 
-map1 = input2[..40].map { |row| row[..40] }
-map2 = input2[..40].map { |row| row[40..] }
-map3 = input2[40..].map { |row| row[0..40] }
-map4 = input2[40..].map { |row| row[40..] }
+  map1 = input2[..40].map { |row| row[..40] }
+  map2 = input2[..40].map { |row| row[40..] }
+  map3 = input2[40..].map { |row| row[0..40] }
+  map4 = input2[40..].map { |row| row[40..] }
 
-# cheeky hack solution to solve each quadrant indepantly, just ignore the walls
-# we can't pass
-p2 = [map1, map2, map3, map4].reduce(0) { |sum, m|
-  m.each do |row|
-    row.each_with_index do |tile, idx|
-      if tile.ascii_uppercase?
-        row[idx] = '.'
+  # cheeky hack solution to solve each quadrant indepantly, just ignore the walls
+  # we can't pass
+  p2 = [map1, map2, map3, map4].reduce(0) { |sum, m|
+    m.each do |row|
+      row.each_with_index do |tile, idx|
+        if tile.ascii_uppercase?
+          row[idx] = '.'
+        end
       end
     end
-  end
-  sub_map = Map.new(m)
+    sub_map = Map.new(m)
 
-  start = sub_map.find('@')
-  start_state = {Set(Tile).new, start, 0, [] of Tile}
-  paths = dijkstra_moves(sub_map, start_state).to_a.sort_by { |p| p[2] }
+    start = sub_map.find('@')
+    start_state = {Set(Tile).new, start, 0, [] of Tile}
+    paths = dijkstra_moves(sub_map, start_state).to_a.sort_by { |p| p[2] }
 
-  sum + paths[0][2]
-}
+    sum + paths[0][2]
+  }
 
-puts "Part 2: %s" % p2
+  puts "Part 2: %s" % p2
+end
 
 alias Tile = Char
 
@@ -84,7 +86,7 @@ def fmt_step(s : State)
   "<take %s : %5i : %s>" % [s[3].last, s[2], s[3].join]
 end
 
-def dijkstra_moves(map, start : State, limit=6347) #6116)
+def dijkstra_moves(map, start : State, limit=6347)
   KEYS_MEMO.clear
   KEYPATH_MEMO.clear
   PATH_MEMO.clear
@@ -123,6 +125,8 @@ def dijkstra_moves(map, start : State, limit=6347) #6116)
       end
     end
   end
+
+  puts "dijkstra_moves exited after #{iterations} iterations with #{solutions.size} solutions"
 
   return solutions
 
