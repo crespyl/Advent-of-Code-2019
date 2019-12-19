@@ -20,7 +20,8 @@ puts "Start: %s" % start.to_s
 start_state = {Set(Tile).new, start, 0, [] of Tile}
 #puts "Available Moves: #{available_moves(map, start_state)}"
 
-paths = dfs_moves(map, start_state)
+# 2000 < x > 6116
+paths = dijkstra_moves(map, start_state)
 # puts "Possible Paths: "
 # paths.each do |p|
 #   puts p
@@ -47,7 +48,102 @@ def fmt_step(s : State)
   "<take %s : %5i : %s>" % [s[3].last, s[2], s[3].join]
 end
 
-def dfs_moves(map, start : State, limit=2000)
+def dijkstra_moves(map, start : State, limit=6347) #6116)
+  iterations = 0
+  open = PQueue(State).new
+  open.insert(start, 0)
+  dist = Hash(Tuple(Set(Tile), Vec2), Int32).new(Int32::MAX)
+  prev = Hash(Set(Tile), Set(Tile)).new
+  solutions = Set(State).new
+
+  dist[{start[3].to_set, start[1]}] = 0
+
+  while ! open.empty?
+    iterations+=1
+    state = open.pop_min
+    next if state[2] > limit
+
+    puts "%10i (%3i, %3i, %3i) : checking %s" % [iterations, open.size, dist.size, prev.size, fmt_step(state)] if iterations % 100000 == 0
+
+    if state[0] == map.all_keys && state[2] < limit
+      puts "Found possible solution: %s" % fmt_step(state)
+      limit = state[2] if state[2] < limit
+      solutions.add state
+    end
+
+    available_moves(map, state).each do |move|
+      #alt = dist[state] + (move[2] - state[2])
+      sset = {state[3].to_set, state[1]}
+      mset = {move[3].to_set, move[1]}
+      alt = dist[sset] + estimate_max_state_dist(map, state, move)
+      if alt < dist[mset]
+        dist[mset] = alt
+        prev[mset[0]] = sset[0]
+        open.insert_or_update(move, alt)
+      end
+    end
+  end
+
+  return solutions
+
+end
+
+class PQueue(T)
+  def initialize()
+    @queue = Array(Tuple(T,Int32)).new
+  end
+
+  def size
+    @queue.size
+  end
+
+  def empty?
+    @queue.empty?
+  end
+
+  def insert(val : T, p : Int32)
+    @queue.push({val, p})
+    idx = 0
+    while idx < @queue.size
+      if (pair = @queue[idx]) && pair[1] > p
+        break
+      end
+      idx += 1
+    end
+    @queue.insert(idx, {val, p})
+  end
+
+  def insert_or_update(val : T, p : Int32)
+    if idx = @queue.index { |pair| pair[0] == val }
+      @queue.update(idx) { {val, p} }
+    else
+      @queue.push({val, p})
+    end
+  end
+
+  def pop_min
+    @queue.pop()[0]
+  end
+
+  def pop_max
+    @queue.shift()[0]
+  end
+end
+
+#DIST_MEMO = Hash(Tuple(Set(Tile), Set(Tile)), Int32).new
+def estimate_max_state_dist(map, a : State, b : State) : Int32
+  #DIST_MEMO[{a[0],b[0]}]? || begin
+                              d = if a[0].superset? b[0]
+                                    0
+                                  else
+                                    b[2] - a[2]
+                                  end
+                               #DIST_MEMO[{a[0],b[0]}] = d
+                               d
+                             #end
+end
+
+def dfs_moves(map, start : State, limit=6116)
   iterations = 0
   end_states = Set(State).new
 
@@ -146,7 +242,7 @@ def available_moves(map, state : State) : Set(State)
                           moves = states.map { |state|
                             _, new_loc, new_dist, new_seq = state
 
-                            on_the_way = find_path(map, loc, new_loc).map { |l| map.get(l) }.select(&.ascii_lowercase?).reject { |k| owned.includes? k }
+                            on_the_way = keys_on_path(map, loc, new_loc).reject { |k| owned.includes? k }
 
                             if on_the_way.size > 1
                               # replace this with a new state that includes the pickup
@@ -175,14 +271,19 @@ def available_keys(map, owned_keys : Set(Tile))
                             end
 end
 
-# return the list of doors on that path
-def find_reqs_for_pos(map : Map, start : Vec2, goal : Vec2)
-  find_path(map, start, goal).map { |loc| map.get(loc) }.reject { |tile| !tile.ascii_uppercase? }
+KEYPATH_MEMO = Hash(Tuple(Vec2,Vec2), Set(Tile)).new
+def keys_on_path(map, start : Vec2, goal : Vec2)
+  KEYPATH_MEMO[{start,goal}]? || begin
+                                   KEYPATH_MEMO[{start,goal}] = find_path(map, start, goal)
+                                                                .map { |l| map.get(l) }
+                                                                .select(&.ascii_lowercase?)
+                                                                .to_set
+                                 end
 end
 
-PATH_MEMO = Hash(Array(Vec2), Array(Vec2)).new
+PATH_MEMO = Hash(Tuple(Vec2,Vec2), Array(Vec2)).new
 def find_path(map : Map, start : Vec2, goal : Vec2) : Array(Vec2)
-  PATH_MEMO[[start,goal].sort]? || begin
+  PATH_MEMO[{start,goal}]? || begin
                                 open = [{start, [] of Vec2, 0}]
                                 visited = Set(Vec2).new
 
@@ -192,7 +293,7 @@ def find_path(map : Map, start : Vec2, goal : Vec2) : Array(Vec2)
 
                                   new_route = route + [loc]
                                   if loc == goal
-                                    PATH_MEMO[[start,goal].sort] = new_route
+                                    PATH_MEMO[{start,goal}] = new_route
                                     return new_route
                                   end
 
@@ -367,5 +468,3 @@ end
 def neighbors(loc : Vec2)
   DIRS.map { |d| loc + d }
 end
-
-# 6116 too high
