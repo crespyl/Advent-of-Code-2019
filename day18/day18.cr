@@ -10,11 +10,11 @@ map = Map.new(input.lines.map { |l| l.chars.to_a })
 # up, right, down, left
 DIRS = [Vec2.new(0,-1), Vec2.new(1,0), Vec2.new(0,1), Vec2.new(-1,0)]
 
-#puts input
+# #puts input
 map.print_map
 
 start = map.find('@')
-puts "Start: %s" % start.to_s
+#puts "Start: %s" % start.to_s
 
 #start_state = {Set{'a', 'b'}, start, 0, ['a', 'b']}
 start_state = {Set(Tile).new, start, 0, [] of Tile}
@@ -37,7 +37,43 @@ else
   puts "no solution found!" unless paths.size > 0
 end
 
-puts "Part 2: %s" % 0
+# input replace to separate map into sub-grids
+input2 = input.lines.map { |l| l.chars.to_a }
+input2[40][40] = '#'
+input2[40][39] = '#'
+input2[40][41] = '#'
+input2[39][40] = '#'
+input2[41][40] = '#'
+input2[39][39] = '@'
+input2[39][41] = '@'
+input2[41][39] = '@'
+input2[41][41] = '@'
+
+map1 = input2[..40].map { |row| row[..40] }
+map2 = input2[..40].map { |row| row[40..] }
+map3 = input2[40..].map { |row| row[0..40] }
+map4 = input2[40..].map { |row| row[40..] }
+
+# cheeky hack solution to solve each quadrant indepantly, just ignore the walls
+# we can't pass
+p2 = [map1, map2, map3, map4].reduce(0) { |sum, m|
+  m.each do |row|
+    row.each_with_index do |tile, idx|
+      if tile.ascii_uppercase?
+        row[idx] = '.'
+      end
+    end
+  end
+  sub_map = Map.new(m)
+
+  start = sub_map.find('@')
+  start_state = {Set(Tile).new, start, 0, [] of Tile}
+  paths = dijkstra_moves(sub_map, start_state).to_a.sort_by { |p| p[2] }
+
+  sum + paths[0][2]
+}
+
+puts "Part 2: %s" % p2
 
 alias Tile = Char
 
@@ -49,6 +85,10 @@ def fmt_step(s : State)
 end
 
 def dijkstra_moves(map, start : State, limit=6347) #6116)
+  KEYS_MEMO.clear
+  KEYPATH_MEMO.clear
+  PATH_MEMO.clear
+ 
   iterations = 0
   open = PQueue(State).new
   open.insert(start, 0)
@@ -63,10 +103,10 @@ def dijkstra_moves(map, start : State, limit=6347) #6116)
     state = open.pop_min
     next if state[2] > limit
 
-    puts "%10i (%3i, %3i, %3i) : checking %s" % [iterations, open.size, dist.size, prev.size, fmt_step(state)] if iterations % 100000 == 0
+    #puts "%10i (%3i, %3i, %3i) : checking %s" % [iterations, open.size, dist.size, prev.size, fmt_step(state)] if iterations % 100000 == 0
 
     if state[0] == map.all_keys && state[2] < limit
-      puts "Found possible solution: %s" % fmt_step(state)
+      #puts "Found possible solution: %s" % fmt_step(state)
       limit = state[2] if state[2] < limit
       solutions.add state
     end
