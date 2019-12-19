@@ -1,3 +1,4 @@
+require "colorize"
 require "./intcode.cr"
 
 module Intcode
@@ -5,6 +6,11 @@ module Intcode
   # the implementation attached as a Proc, along with a function to generate
   # simplistic human-readable string for debugging
   class Opcode
+    @@colorize = false
+    def self.colorize=(enabled)
+      @@colorize = enabled
+    end
+   
     property sym : Symbol
     property size : Int32
     property impl : Proc(VM, Array(Parameter), Int64)
@@ -119,7 +125,12 @@ module Intcode
                       end
                     },
                     ->(vm: VM, params: Array(Parameter)) {
-                      "JT  %5s, %5s" % params.map { |p| p.debug }
+                      # debug JT, 1 as JMP
+                      if vm.read_param(params[0]) == 0
+                        "JMP %5s" % params[1].debug
+                      else
+                        "JT  %5s, %5s" % params.map { |p| p.debug }
+                      end
                     }),
     6 => Opcode.new(:jf, 3,
                     ->(vm: VM, params: Array(Parameter)) {
@@ -131,7 +142,12 @@ module Intcode
                       end
                     },
                     ->(vm: VM, params: Array(Parameter)) {
-                      "JF  %5s, %5s" % params.map { |p| p.debug }
+                      # debug JF, 0 as JMP
+                      if params[0]
+                        "JMP %5s" % params[1].debug
+                      else
+                        "JF  %5s, %5s" % params.map { |p| p.debug }
+                      end
                     }),
     7 => Opcode.new(:lt, 4,
                     ->(vm: VM, params: Array(Parameter)) {

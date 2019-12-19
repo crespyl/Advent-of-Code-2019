@@ -24,6 +24,14 @@ module Utils
       end
     end
 
+    def <=>(other : Vec2)
+      case x <=> other.x
+      when 0 then x <=> other.y
+      when -1 then -1
+      when 1 then 1
+      end
+    end
+
     def +(other : Vec2)
       Vec2.new(self.x+other.x,self.y+other.y)
     end
@@ -36,11 +44,16 @@ module Utils
       Vec2.new(self.x*other.x,self.y*other.y)
     end
 
+    def dist(other : Vec2)
+      Math.sqrt((@x - other.x)**2 + (@y - other.y)**2)
+    end
+
+    def clone
+      Vec2.new(@x,@y)
+    end
+
     def to_s
       "Vec2(#{@x},#{@y})"
-    end
-    def inspect
-      to_s
     end
   end
 

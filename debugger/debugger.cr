@@ -43,8 +43,8 @@ class Debugger
     segment = @vm.mem[start..stop]
     log "showing #{start}..#{stop}"
 
-    dis = Disasm.intcode_to_str(segment, start)
-    log "\n%s\n" % dis
+    dis = Disasm.intcode_to_str(segment, start, true)
+    log ("\n%s\n" % dis)
   end
 
   def prompt
@@ -52,11 +52,11 @@ class Debugger
       "%s:%s] " % [@vm.name, @vm.status, format_addr_val(@vm.pc), format_addr_val(@vm.rel_base)]
     else
       "> "
-    end
+    end.colorize(:white).mode(:bright).to_s
   end
 
   def format_addr_val(addr)
-    "%05i (%05i)" % [addr, @vm.read_mem(addr)]
+    ("%05i (%05i)" % [addr, @vm.read_mem(addr)]).colorize(:green)
   end
 
   def log(msg)

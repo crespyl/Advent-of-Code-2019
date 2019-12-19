@@ -1,3 +1,4 @@
+require "colorize"
 require "./opcodes.cr"
 require "./vm.cr"
 
@@ -30,6 +31,9 @@ module Intcode
   # Represents an encoded parameter and its addressing mode, used by both the VM
   # and Opcodes
   struct Parameter
+    @@colorize = false
+    def self.colorize=(val) @@colorize=val end
+
     property val : Int64   # The original value in memory
     property mode : Symbol # The addressing mode
 
@@ -38,12 +42,20 @@ module Intcode
     # Return a debug string indicating the mode and value, used for debug and
     # disasm
     def debug
-      case mode
-      when :position then "@#{val}"
-      when :relative then "$#{val}"
-      when :literal then "#{val}"
+      str = case mode
+      when :position then "@#{val}".rjust(5)
+      when :relative then "$#{val}".rjust(5)
+      when :literal then "#{val}".rjust(5)
       else
-        "?#{mode}:#{val}"
+        "?#{mode}:#{val}".rjust(5)
+      end
+
+      if colorize
+        str = case mode
+              when :position then str.colorize(:green)
+              when :relative then str.colorize(:blue)
+              when :literal then str
+              end
       end
     end
   end

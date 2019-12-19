@@ -1,9 +1,14 @@
+require "colorize"
 require "../lib/intcode.cr"
 
 module Disasm
-  def self.intcode_to_str(intcode : Array(Int64), offset=0)
+  def self.intcode_to_str(intcode : Array(Int64), offset=0, colorize=false)
+
+    Intcode::Opcode.colorize = colorize
+    Intcode::Parameter.colorize = colorize
 
     vm = Intcode::VM.new(intcode)
+
     address = 0_i64
 
     String.build do |str|
