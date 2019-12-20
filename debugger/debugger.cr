@@ -25,7 +25,7 @@ class Debugger
   def print_vm_summary
     puts "%s:%s] PC: %s  BASE: %s" % [@vm.name, @vm.status, format_addr_val(@vm.pc), format_addr_val(@vm.rel_base)]
     puts "IN: #{@vm.input}" if @vm.input.size > 0
-    puts "ERR: %s" % @vm.error if @vm.error
+    puts "ERR: %s".colorize(:red).to_s % @vm.error if @vm.error
     print_watches
     print_disasm(@vm.pc, @vm.pc+25) if @vm.mem.size > 1
   end
