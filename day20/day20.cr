@@ -12,10 +12,11 @@ map.print_map
 
 path = bfs_path(map, map.start, map.goal)
 map.print_map_path(path)
-puts "Part 1: %i" % (path.size-1) # -1 to exclude the starting tile
+puts "Part 1: %i\n" % (path.size-1) # -1 to exclude the starting tile
 
 path = astar_recursive_path(map, Vec3.new(map.start), Vec3.new(map.goal))
-puts "Part 2: %i" % path.size
+map.print_map_path(path)
+puts "Part 2: %i" % (path.size-1) # 7799 too high
 
 def bfs_path(map : Map, start : Vec2, goal : Vec2)
   open = Set(Tuple(Vec2, Array(Vec2))).new
@@ -58,7 +59,8 @@ def bfs_recursive_path(map : Map, start : Vec3, goal : Vec3)
   iterations = 0
   while !open.empty?
     iterations += 1
-    puts "BFS Iterations: %i (%i)" % [iterations, open.size] if iterations % 50000 == 0
+    # puts "BFS Iterations: %i (%i)" % [iterations, open.size] if iterations % 500 == 0
+    # map.print_map_path(open.first[1]) if iterations % 500 == 0
 
     frontier = Set(Tuple(Vec3, Array(Vec3))).new
 
@@ -67,7 +69,6 @@ def bfs_recursive_path(map : Map, start : Vec3, goal : Vec3)
       next if visited.includes? loc
       visited.add(loc)
 
-      map.print_map_path(path) if iterations % 50000 == 0
 
       return path if loc == goal
 
@@ -84,7 +85,7 @@ def bfs_recursive_path(map : Map, start : Vec3, goal : Vec3)
 end
 
 def astar_heuristic(map : Map, loc : Vec3, goal : Vec3)
-  loc.xy.dist(goal.xy).to_i
+  loc.dist(goal)
 end
 
 def astar_recursive_path(map : Map, start : Vec3, goal : Vec3)
@@ -115,10 +116,10 @@ def astar_recursive_path(map : Map, start : Vec3, goal : Vec3)
     loc = open.min_by { |loc| fscore[loc] }
     open.delete(loc)
 
-    if iterations % 1 == 0
-      puts "A* Iterations: %i (%i)" % [iterations, open.size]
-      map.print_map_path(reconstruct_path.call(loc))
-    end
+    # if iterations % 100000 == 0
+    #   puts "A* Iterations: %i (%i)" % [iterations, open.size]
+    #   map.print_map_path(reconstruct_path.call(loc))
+    # end
 
     if loc == goal
       #puts "Dijkstra search ended: #{path}"
@@ -138,45 +139,6 @@ def astar_recursive_path(map : Map, start : Vec3, goal : Vec3)
     end
   end
 
-  return [] of Vec3
-end
-
-def dijkstra_recursive_path(map : Map, start : Vec3, goal : Vec3)
-  open = PQueue(Tuple(Vec3, Array(Vec3))).new
-  open.insert({start, [start]}, 0)
-
-  dist = Hash(Vec3, Int32).new(Int32::MAX)
-  dist[start] = 0
-
-  prev = Hash(Vec3, Vec3).new
-
-  iterations = 0
-  while !open.empty?
-    iterations += 1
-    loc, path = open.pop_min
-    #puts "   examine : #{loc.to_s} (#{path.size})"
-
-    if iterations % 10000 == 0
-      puts "Dijkstra Iterations: %i (%i)" % [iterations, open.size]
-      map.print_map_path(path)
-    end
-
-    if loc == goal
-      #puts "Dijkstra search ended: #{path}"
-      return path
-    end
-
-    map.recursive_walkable_neighbors(loc).each do |n|
-      #puts "  examine neighbor : #{n.to_s}"
-      alt = dist[loc] + 1
-      if alt < dist[n]
-        dist[n] = alt
-        prev[n] = loc
-        open.insert_or_update({n, path.clone << n}, alt)
-      end
-    end
-  end
- 
   return [] of Vec3
 end
 
