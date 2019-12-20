@@ -126,52 +126,11 @@ def dijkstra_moves(map, start : State, limit=6347)
     end
   end
 
-  puts "dijkstra_moves exited after #{iterations} iterations with #{solutions.size} solutions"
+  puts "dijkstra_moves exited after %i iterations with %i solutions" % [iterations, solutions.size]
+  puts "  Caches: Available Keys (%i), Paths (%i), Keys-on-Path (%i)" % [KEYS_MEMO.size, PATH_MEMO.size, KEYPATH_MEMO.size]
 
   return solutions
 
-end
-
-class PQueue(T)
-  def initialize()
-    @queue = Array(Tuple(T,Int32)).new
-  end
-
-  def size
-    @queue.size
-  end
-
-  def empty?
-    @queue.empty?
-  end
-
-  def insert(val : T, p : Int32)
-    @queue.push({val, p})
-    idx = 0
-    while idx < @queue.size
-      if (pair = @queue[idx]) && pair[1] > p
-        break
-      end
-      idx += 1
-    end
-    @queue.insert(idx, {val, p})
-  end
-
-  def insert_or_update(val : T, p : Int32)
-    if idx = @queue.index { |pair| pair[0] == val }
-      @queue.update(idx) { {val, p} }
-    else
-      @queue.push({val, p})
-    end
-  end
-
-  def pop_min
-    @queue.pop()[0]
-  end
-
-  def pop_max
-    @queue.shift()[0]
-  end
 end
 
 #DIST_MEMO = Hash(Tuple(Set(Tile), Set(Tile)), Int32).new
