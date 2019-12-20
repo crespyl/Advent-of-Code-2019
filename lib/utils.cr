@@ -101,6 +101,10 @@ module Utils
       (self.x-other.x).abs + (self.y-other.y).abs + (self.z-other.z).abs
     end
 
+    def dist(other : Vec2)
+      (self.x-other.x).abs + (self.y-other.y).abs
+    end
+
     def clone
       Vec3.new(@x,@y,@z)
     end
