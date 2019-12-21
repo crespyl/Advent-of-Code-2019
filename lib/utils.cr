@@ -37,7 +37,7 @@ module Utils
       end
     end
 
-    def pop_min
+    def pop_min : T
       @queue.pop()[0]
     end
 

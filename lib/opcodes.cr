@@ -126,11 +126,11 @@ module Intcode
                     },
                     ->(vm: VM, params: Array(Parameter)) {
                       # debug JT, 1 as JMP
-                      if vm.read_param(params[0]) == 0
-                        "JMP %5s" % params[1].debug
-                      else
+                      # if vm.read_param(params[0]) == 0
+                      #   "JMP %5s" % params[1].debug
+                      # else
                         "JT  %5s, %5s" % params.map { |p| p.debug }
-                      end
+                      # end
                     }),
     6 => Opcode.new(:jf, 3,
                     ->(vm: VM, params: Array(Parameter)) {
@@ -143,11 +143,11 @@ module Intcode
                     },
                     ->(vm: VM, params: Array(Parameter)) {
                       # debug JF, 0 as JMP
-                      if params[0]
-                        "JMP %5s" % params[1].debug
-                      else
+                      # if params[0]
+                      #   "JMP %5s" % params[1].debug
+                      # else
                         "JF  %5s, %5s" % params.map { |p| p.debug }
-                      end
+                      # end
                     }),
     7 => Opcode.new(:lt, 4,
                     ->(vm: VM, params: Array(Parameter)) {
