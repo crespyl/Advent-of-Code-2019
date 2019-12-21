@@ -78,9 +78,14 @@ class Debugger
     @vm = VM2.from_file(filename)
     @vm.output_fn = ->(x: Int64) {
       @output_log << x;
+      if x > 0 && x < Char::MAX.ord
+        chr = x.chr
+      else
+        chr = "%i" % x
+      end
       case @io_mode
-      when :int then log "VM OUTPUT: %5i   (%s)" % [x,x.chr.ascii_control? ? ' ' : x.chr]
-      when :text then print (x >= 0 ? x.chr : "{chr: %i}" % x)
+      when :int then log "VM OUTPUT: %5i   (%s)" % [x,chr]
+      when :text then print (x >= 0 ? chr : "{chr: %i}" % x)
       end
     }
     log "loaded VM (%i)" % @vm.mem.size
