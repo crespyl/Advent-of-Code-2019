@@ -19,7 +19,7 @@ class Debugger
     @watchlist = {} of String => Int32
     @breakpoints = {} of Int32 => String
     @output_log = [] of Int64
-    @io_mode = :int
+    @io_mode = :text
   end
 
   def print_vm_summary
