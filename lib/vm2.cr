@@ -61,6 +61,10 @@ module VM2
       @output.shift?
     end
 
+    def read_output_or_raise : Int64
+      @output.shift? || raise "#{name} tried to read from empty output buffer"
+    end
+
     def read_input
       if @input_fn
         @input_fn.try { |f| f.call() }
@@ -116,7 +120,7 @@ module VM2
     end
 
     def decode(n_params=3)
-      instr = mem[pc]
+      instr = read_mem(pc)
       opcode = instr % 100
 
       instr //= 100
@@ -129,7 +133,7 @@ module VM2
       @exec_hook_fn.try { |fn| fn.call(self) }
       @cycles += 1
       opcode, params = decode
-      log "%5i : %05i : %s" % [pc, mem[pc], VM2.disasm(opcode, params)]
+      log "%5i : %05i : %s" % [pc, read_mem(pc), VM2.disasm(opcode, params)]
 
       case opcode
       when 1 # add
